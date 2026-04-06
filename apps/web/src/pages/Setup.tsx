@@ -1,16 +1,129 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { bleProvisioner } from '../lib/ble-provisioning';
+
+type SetupStep = 'scan' | 'connect' | 'wifi' | 'sending' | 'done' | 'error';
 
 export function Setup() {
-  // TODO: BLE WiFi provisioning via Web Bluetooth API
-  // 1. Scan for MyAthan-XXXX devices
-  // 2. Connect via BLE GATT
-  // 3. Write SSID + password characteristics
-  // 4. Monitor connection status
+  const [step, setStep] = useState<SetupStep>('scan');
+  const [deviceName, setDeviceName] = useState('');
+  const [ssid, setSsid] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  async function handleScan() {
+    try {
+      setError('');
+      const device = await bleProvisioner.scan();
+      setDeviceName(device.name || 'MyAthan Device');
+      setStep('connect');
+
+      await bleProvisioner.connect();
+      setStep('wifi');
+    } catch (e: any) {
+      setError(e.message || 'Bluetooth scan failed');
+      setStep('error');
+    }
+  }
+
+  async function handleSendCredentials() {
+    if (!ssid) { setError('Enter WiFi network name'); return; }
+    try {
+      setStep('sending');
+      await bleProvisioner.sendCredentials(ssid, password);
+      setStep('done');
+    } catch (e: any) {
+      setError(e.message || 'Failed to send credentials');
+      setStep('error');
+    }
+  }
+
   return (
-    <div>
-      <h1>Device Setup</h1>
-      <p>Connect to your MyAthan device via Bluetooth</p>
-      <button>Scan for Devices</button>
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-900">Device Setup</h2>
+
+      {step === 'scan' && (
+        <div className="text-center space-y-4">
+          <p className="text-gray-600">Connect to your MyAthan device via Bluetooth to set up WiFi.</p>
+          <button
+            onClick={handleScan}
+            className="bg-emerald-700 text-white px-8 py-3 rounded-xl font-medium w-full"
+          >
+            Scan for Devices
+          </button>
+          <p className="text-xs text-gray-400">
+            Make sure Bluetooth is enabled and your device is powered on.
+          </p>
+        </div>
+      )}
+
+      {step === 'connect' && (
+        <div className="text-center py-8">
+          <div className="animate-pulse text-emerald-700 text-lg">Connecting to {deviceName}...</div>
+        </div>
+      )}
+
+      {step === 'wifi' && (
+        <div className="space-y-4">
+          <div className="bg-emerald-50 rounded-xl p-3 text-center">
+            <p className="text-emerald-700 font-medium">Connected to {deviceName}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">WiFi Network</label>
+            <input
+              type="text" value={ssid} onChange={e => setSsid(e.target.value)}
+              placeholder="Enter WiFi SSID"
+              className="w-full border rounded-xl p-3"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="Enter WiFi password"
+              className="w-full border rounded-xl p-3"
+            />
+          </div>
+
+          <button
+            onClick={handleSendCredentials}
+            className="bg-emerald-700 text-white px-8 py-3 rounded-xl font-medium w-full"
+          >
+            Connect Device to WiFi
+          </button>
+        </div>
+      )}
+
+      {step === 'sending' && (
+        <div className="text-center py-8">
+          <div className="animate-pulse text-emerald-700 text-lg">Sending WiFi credentials...</div>
+        </div>
+      )}
+
+      {step === 'done' && (
+        <div className="text-center space-y-4 py-8">
+          <div className="text-4xl">✅</div>
+          <p className="text-lg font-medium text-gray-900">Device Connected!</p>
+          <p className="text-gray-500">Your MyAthan device is now connected to WiFi and will sync prayer times automatically.</p>
+          <a href="/" className="inline-block bg-emerald-700 text-white px-8 py-3 rounded-xl font-medium">
+            Go to Home
+          </a>
+        </div>
+      )}
+
+      {step === 'error' && (
+        <div className="text-center space-y-4">
+          <div className="text-4xl">❌</div>
+          <p className="text-red-600">{error}</p>
+          <button
+            onClick={() => { setStep('scan'); setError(''); }}
+            className="bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
     </div>
   );
 }
