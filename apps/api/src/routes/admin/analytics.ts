@@ -5,10 +5,13 @@ import { db, schema } from '../../db/index.js';
 import { adminAuth } from '../../middleware/device-auth.js';
 
 export async function analyticsRoutes(app: FastifyInstance) {
-  app.addHook('preHandler', adminAuth);
+  // Rate limiting for analytics routes (60 req/min per IP)
+  await app.register(import('@fastify/rate-limit'), {
+    max: 60,
+    timeWindow: '1 minute',
+  });
 
-  // Route-level rate limiting (supplements global @fastify/rate-limit)
-  const routeRateLimit = { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } };
+  app.addHook('preHandler', adminAuth);
 
   // ── GET /api/admin/analytics/map ──────────────────────────
   // All devices with location for map visualization
