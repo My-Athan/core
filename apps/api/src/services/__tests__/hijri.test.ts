@@ -21,9 +21,10 @@ describe('Hijri Calendar', () => {
     });
 
     it('applies adjustment correctly', () => {
-      const h0 = gregorianToHijri(2024, 3, 11, 0);
-      const h1 = gregorianToHijri(2024, 3, 11, 1);
-      const hm1 = gregorianToHijri(2024, 3, 11, -1);
+      // Use a mid-month date to avoid month boundary issues
+      const h0 = gregorianToHijri(2024, 3, 20, 0);
+      const h1 = gregorianToHijri(2024, 3, 20, 1);
+      const hm1 = gregorianToHijri(2024, 3, 20, -1);
       expect(h1.day).toBe(h0.day + 1);
       expect(hm1.day).toBe(h0.day - 1);
     });

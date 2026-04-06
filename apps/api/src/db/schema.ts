@@ -29,11 +29,11 @@ export const devices = pgTable('devices', {
   config: jsonb('config').default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => [
-  index('idx_devices_group_id').on(table.groupId),
-  index('idx_devices_last_heartbeat').on(table.lastHeartbeat),
-  index('idx_devices_user_id').on(table.userId),
-]);
+}, (table) => ({
+  groupIdIdx: index('idx_devices_group_id').on(table.groupId),
+  heartbeatIdx: index('idx_devices_last_heartbeat').on(table.lastHeartbeat),
+  userIdIdx: index('idx_devices_user_id').on(table.userId),
+}));
 
 // ─────────────────────────────────────────────────────────────
 // Device Groups (Multi-Room)
@@ -77,9 +77,9 @@ export const stats = pgTable('stats', {
   freeHeap: integer('free_heap'),
   wifiRssi: integer('wifi_rssi'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => [
-  index('idx_stats_device_date').on(table.deviceId, table.date),
-]);
+}, (table) => ({
+  deviceDateIdx: index('idx_stats_device_date').on(table.deviceId, table.date),
+}));
 
 // ─────────────────────────────────────────────────────────────
 // Sync Triggers (Multi-Room)
@@ -92,6 +92,6 @@ export const syncTriggers = pgTable('sync_triggers', {
   triggerAtEpoch: integer('trigger_at_epoch').notNull(),
   consumed: boolean('consumed').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => [
-  index('idx_sync_group_consumed').on(table.groupId, table.consumed),
-]);
+}, (table) => ({
+  groupConsumedIdx: index('idx_sync_group_consumed').on(table.groupId, table.consumed),
+}));
