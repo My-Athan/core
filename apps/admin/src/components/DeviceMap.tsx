@@ -21,8 +21,7 @@ interface MapDevice {
 export function DeviceMap() {
   const [devices, setDevices] = useState<MapDevice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [mapReady, setMapReady] = useState(false);
+  const [, setActionLoading] = useState<string | null>(null);
 
   const loadDevices = useCallback(async () => {
     try {
@@ -120,8 +119,6 @@ export function DeviceMap() {
     if (bounds.length > 0) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
     }
-
-    setMapReady(true);
 
     return () => { map.remove(); };
   }, [devices, loading]);

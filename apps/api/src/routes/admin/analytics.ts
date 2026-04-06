@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, and, desc, gte, sql } from 'drizzle-orm';
+import { eq, desc, gte, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '../../db/index.js';
 import { adminAuth } from '../../middleware/device-auth.js';
