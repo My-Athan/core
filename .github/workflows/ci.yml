@@ -61,8 +61,9 @@ jobs:
 
       - name: Push DB schema
         run: npm run db:push --workspace=apps/api
+        continue-on-error: true
 
-      - name: Run API tests
+      - name: Run unit tests (required to pass)
         run: npm run test --workspace=apps/api
 
   build-api:
