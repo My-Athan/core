@@ -13,8 +13,11 @@ export function useDeviceStatus() {
       setError(null);
       const data = await deviceApi.getStatus();
       setStatus(data);
-    } catch (e) {
-      setError('Cannot reach device. Make sure you are on the same WiFi network.');
+    } catch (e: any) {
+      const msg = e?.name === 'AbortError'
+        ? 'Device not responding (timeout)'
+        : 'Cannot reach device. Make sure you are on the same WiFi network.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -22,7 +25,7 @@ export function useDeviceStatus() {
 
   useEffect(() => {
     refresh();
-    const interval = setInterval(refresh, 30000); // Refresh every 30s
+    const interval = setInterval(refresh, 30000);
     return () => clearInterval(interval);
   }, [refresh]);
 
@@ -32,25 +35,37 @@ export function useDeviceStatus() {
 export function useDeviceConfig() {
   const [config, setConfig] = useState<DeviceConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await deviceApi.getConfig();
       setConfig(data);
-    } catch {
-      // Device unreachable
+    } catch (e: any) {
+      setError(e?.name === 'AbortError' ? 'Device timeout' : 'Device unreachable');
     } finally {
       setLoading(false);
     }
   }, []);
 
   const updateConfig = useCallback(async (partial: Partial<DeviceConfig>) => {
-    await deviceApi.updateConfig(partial);
-    await refresh();
+    try {
+      setSaving(true);
+      setError(null);
+      await deviceApi.updateConfig(partial);
+      await refresh();
+    } catch (e: any) {
+      setError('Failed to save config');
+      throw e;
+    } finally {
+      setSaving(false);
+    }
   }, [refresh]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  return { config, loading, refresh, updateConfig };
+  return { config, loading, error, saving, refresh, updateConfig };
 }

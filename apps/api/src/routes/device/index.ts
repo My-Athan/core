@@ -1,24 +1,47 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
 import { db, schema } from '../../db/index.js';
 import { deviceAuth, deriveApiKey } from '../../middleware/device-auth.js';
 import { calculatePrayerTimes } from '../../services/prayer-times.js';
 import { gregorianToHijri, isRamadan, getHoliday } from '../../services/hijri.js';
 import type { CalcMethod, AsrJuristic } from '@myathan/shared';
 
+// ── Zod Schemas ─────────────────────────────────────────────
+const registerSchema = z.object({
+  deviceId: z.string().regex(/^myathan-[a-f0-9]{6}$/).max(32),
+  firmwareVersion: z.string().max(20).optional(),
+});
+
+const heartbeatSchema = z.object({
+  firmwareVersion: z.string().max(20).optional(),
+  freeHeap: z.number().int().nonnegative().optional(),
+  wifiRssi: z.number().int().min(-100).max(0).optional(),
+  uptime: z.number().int().nonnegative().optional(),
+  prayerPlays: z.record(z.number().int().nonnegative()).optional(),
+  errors: z.number().int().nonnegative().optional(),
+  consumedTriggerId: z.string().uuid().optional(),
+});
+
+const timetableSchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lon: z.coerce.number().min(-180).max(180),
+  method: z.string().max(10).optional(),
+  asr: z.string().max(10).optional(),
+  date: z.string().max(10).optional(),
+});
+
 export async function deviceRoutes(app: FastifyInstance) {
 
   // ── POST /api/device/register ─────────────────────────────
   // Called once on first boot. Device sends its MAC-derived ID.
   // Server generates API key and stores the device.
-  app.post<{
-    Body: { deviceId: string; firmwareVersion?: string };
-  }>('/register', async (request, reply) => {
-    const { deviceId, firmwareVersion } = request.body;
-
-    if (!deviceId || !deviceId.startsWith('myathan-')) {
-      return reply.status(400).send({ error: 'Invalid deviceId format' });
+  app.post('/register', async (request, reply) => {
+    const parsed = registerSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
     }
+    const { deviceId, firmwareVersion } = parsed.data;
 
     // Check if already registered
     const [existing] = await db
@@ -94,21 +117,15 @@ export async function deviceRoutes(app: FastifyInstance) {
   });
 
   // ── POST /api/device/heartbeat ────────────────────────────
-  // Device sends periodic heartbeat with stats.
-  app.post<{
-    Body: {
-      firmwareVersion?: string;
-      freeHeap?: number;
-      wifiRssi?: number;
-      uptime?: number;
-      prayerPlays?: Record<string, number>;
-      errors?: number;
-    };
-  }>('/heartbeat', {
+  app.post('/heartbeat', {
     preHandler: deviceAuth,
   }, async (request, reply) => {
+    const parsed = heartbeatSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid input' });
+    }
     const device = (request as any).device;
-    const { firmwareVersion, freeHeap, wifiRssi, uptime, prayerPlays, errors } = request.body;
+    const { firmwareVersion, freeHeap, wifiRssi, uptime, prayerPlays, errors, consumedTriggerId } = parsed.data;
 
     // Update device record
     await db
@@ -134,10 +151,17 @@ export async function deviceRoutes(app: FastifyInstance) {
       });
     }
 
-    // Return any pending config changes or sync triggers
+    // Mark previously consumed trigger if device reports it
+    if (consumedTriggerId) {
+      await db
+        .update(schema.syncTriggers)
+        .set({ consumed: true })
+        .where(eq(schema.syncTriggers.id, consumedTriggerId));
+    }
+
+    // Return any pending sync triggers
     const response: Record<string, unknown> = { ok: true };
 
-    // Check for pending sync triggers if device is in a group
     if (device.groupId) {
       const [trigger] = await db
         .select()
@@ -153,6 +177,7 @@ export async function deviceRoutes(app: FastifyInstance) {
 
       if (trigger) {
         response.syncTrigger = {
+          id: trigger.id,
           prayer: trigger.prayer,
           triggerAtEpoch: trigger.triggerAtEpoch,
         };
@@ -164,23 +189,12 @@ export async function deviceRoutes(app: FastifyInstance) {
 
   // ── GET /api/device/timetable ─────────────────────────────
   // Server-side prayer time calculation (verification/fallback).
-  app.get<{
-    Querystring: {
-      lat: string;
-      lon: string;
-      method?: string;
-      asr?: string;
-      date?: string;
-    };
-  }>('/timetable', async (request, reply) => {
-    const { lat, lon, method, asr, date: dateStr } = request.query;
-
-    const latitude = parseFloat(lat);
-    const longitude = parseFloat(lon);
-
-    if (isNaN(latitude) || isNaN(longitude)) {
-      return reply.status(400).send({ error: 'Invalid lat/lon' });
+  app.get('/timetable', async (request, reply) => {
+    const parsed = timetableSchema.safeParse(request.query);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
     }
+    const { lat: latitude, lon: longitude, method, asr, date: dateStr } = parsed.data;
 
     const date = dateStr ? new Date(dateStr) : new Date();
     const calcMethod = (method as CalcMethod) || 'ISNA';
