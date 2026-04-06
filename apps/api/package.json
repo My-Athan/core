@@ -23,6 +23,9 @@
     "adhan": "^4.4.0",
     "zod": "^3.23.0",
     "@aws-sdk/client-s3": "^3.650.0",
+    "@aws-sdk/s3-request-presigner": "^3.650.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "bcryptjs": "^2.4.3",
     "@myathan/shared": "*"
   },
   "devDependencies": {
@@ -31,6 +34,8 @@
     "vitest": "^2.1.0",
     "drizzle-kit": "^0.26.0",
     "@types/pg": "^8.11.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "@types/bcryptjs": "^2.4.0",
+    "supertest": "^7.0.0"
   }
 }
