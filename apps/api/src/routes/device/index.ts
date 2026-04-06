@@ -16,6 +16,8 @@ const registerSchema = z.object({
 const heartbeatSchema = z.object({
   firmwareVersion: z.string().max(20).optional(),
   freeHeap: z.number().int().nonnegative().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lon: z.number().min(-180).max(180).optional(),
   wifiRssi: z.number().int().min(-100).max(0).optional(),
   uptime: z.number().int().nonnegative().optional(),
   prayerPlays: z.record(z.number().int().nonnegative()).optional(),
@@ -125,15 +127,17 @@ export async function deviceRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Invalid input' });
     }
     const device = (request as any).device;
-    const { firmwareVersion, freeHeap, wifiRssi, uptime, prayerPlays, errors, consumedTriggerId } = parsed.data;
+    const { firmwareVersion, freeHeap, wifiRssi, uptime, prayerPlays, errors, consumedTriggerId, lat, lon } = parsed.data;
 
-    // Update device record
+    // Update device record (including location if provided)
     await db
       .update(schema.devices)
       .set({
         lastHeartbeat: new Date(),
         lastIp: request.ip,
         firmwareVersion: firmwareVersion || device.firmwareVersion,
+        lat: lat ?? device.lat,
+        lon: lon ?? device.lon,
         updatedAt: new Date(),
       })
       .where(eq(schema.devices.id, device.id));
@@ -182,6 +186,32 @@ export async function deviceRoutes(app: FastifyInstance) {
           triggerAtEpoch: trigger.triggerAtEpoch,
         };
       }
+    }
+
+    // Check for pending commands
+    const [pendingCmd] = await db
+      .select()
+      .from(schema.deviceCommands)
+      .where(
+        and(
+          eq(schema.deviceCommands.deviceId, device.deviceId),
+          eq(schema.deviceCommands.status, 'pending'),
+        )
+      )
+      .orderBy(schema.deviceCommands.createdAt)
+      .limit(1);
+
+    if (pendingCmd) {
+      response.command = {
+        id: pendingCmd.id,
+        command: pendingCmd.command,
+        payload: pendingCmd.payload,
+      };
+      // Mark as delivered
+      await db
+        .update(schema.deviceCommands)
+        .set({ status: 'delivered', deliveredAt: new Date() })
+        .where(eq(schema.deviceCommands.id, pendingCmd.id));
     }
 
     return reply.send(response);
