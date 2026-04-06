@@ -1,0 +1,103 @@
+name: Core CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check shared
+        run: npm run lint --workspace=packages/shared
+
+      - name: Type check API
+        run: npm run lint --workspace=apps/api
+
+  test-api:
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: myathan
+          POSTGRES_PASSWORD: myathan
+          POSTGRES_DB: myathan_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://myathan:myathan@localhost:5432/myathan_test
+      JWT_SECRET: test-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Push DB schema
+        run: npm run db:push --workspace=apps/api
+
+      - name: Run API tests
+        run: npm run test --workspace=apps/api
+
+  build-api:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared
+        run: npm run build --workspace=packages/shared
+
+      - name: Build API
+        run: npm run build --workspace=apps/api
+
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: [test-api, build-api]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -f infra/docker/Dockerfile.api -t myathan-api:${{ github.sha }} .
+
+      - name: Report
+        run: |
+          echo "### Docker Build" >> $GITHUB_STEP_SUMMARY
+          echo "Image: myathan-api:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

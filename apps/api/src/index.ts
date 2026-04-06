@@ -5,19 +5,27 @@ import { deviceRoutes } from './routes/device/index.js';
 import { adminRoutes } from './routes/admin/index.js';
 
 const app = Fastify({
-  logger: true,
+  logger: {
+    level: process.env.LOG_LEVEL || 'info',
+  },
 });
 
 // Plugins
 await app.register(cors, { origin: true });
-await app.register(jwt, { secret: process.env.JWT_SECRET || 'dev-secret-change-me' });
+await app.register(jwt, {
+  secret: process.env.JWT_SECRET || 'dev-secret-change-me',
+});
 
 // Routes
 await app.register(deviceRoutes, { prefix: '/api/device' });
 await app.register(adminRoutes, { prefix: '/api/admin' });
 
 // Health check
-app.get('/health', async () => ({ status: 'ok', version: '0.1.0' }));
+app.get('/health', async () => ({
+  status: 'ok',
+  version: '0.1.0',
+  timestamp: new Date().toISOString(),
+}));
 
 // Start
 const port = parseInt(process.env.PORT || '3000');

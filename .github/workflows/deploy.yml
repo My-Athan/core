@@ -1,0 +1,47 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/shared/**'
+      - 'infra/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Coolify
+        if: vars.COOLIFY_WEBHOOK != ''
+        run: |
+          curl -X POST "${{ vars.COOLIFY_WEBHOOK }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            --fail --silent --show-error
+          echo "### Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered Coolify deployment for **${{ github.event.inputs.environment || 'staging' }}**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Wait for deployment
+        if: vars.HEALTH_CHECK_URL != ''
+        run: |
+          echo "Waiting 30s for deployment..."
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.HEALTH_CHECK_URL }}/health" || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "Health check passed"
+          else
+            echo "::warning::Health check returned $STATUS"
+          fi
