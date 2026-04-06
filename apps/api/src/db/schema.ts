@@ -26,6 +26,10 @@ export const devices = pgTable('devices', {
   firmwareVersion: varchar('firmware_version', { length: 20 }),
   lastHeartbeat: timestamp('last_heartbeat'),
   lastIp: varchar('last_ip', { length: 45 }),
+  lat: real('lat'),
+  lon: real('lon'),
+  city: varchar('city', { length: 100 }),
+  country: varchar('country', { length: 100 }),
   config: jsonb('config').default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -33,6 +37,7 @@ export const devices = pgTable('devices', {
   groupIdIdx: index('idx_devices_group_id').on(table.groupId),
   heartbeatIdx: index('idx_devices_last_heartbeat').on(table.lastHeartbeat),
   userIdIdx: index('idx_devices_user_id').on(table.userId),
+  locationIdx: index('idx_devices_location').on(table.lat, table.lon),
 }));
 
 // ─────────────────────────────────────────────────────────────
@@ -94,4 +99,21 @@ export const syncTriggers = pgTable('sync_triggers', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   groupConsumedIdx: index('idx_sync_group_consumed').on(table.groupId, table.consumed),
+}));
+
+// ─────────────────────────────────────────────────────────────
+// Device Commands (remote management)
+// ─────────────────────────────────────────────────────────────
+
+export const deviceCommands = pgTable('device_commands', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  deviceId: varchar('device_id', { length: 32 }).notNull(),
+  command: varchar('command', { length: 30 }).notNull(),  // 'ota_update' | 'wifi_reset' | 'restart'
+  payload: jsonb('payload').default({}),
+  status: varchar('status', { length: 20 }).notNull().default('pending'),  // 'pending' | 'delivered' | 'executed'
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  deliveredAt: timestamp('delivered_at'),
+  executedAt: timestamp('executed_at'),
+}, (table) => ({
+  deviceStatusIdx: index('idx_commands_device_status').on(table.deviceId, table.status),
 }));

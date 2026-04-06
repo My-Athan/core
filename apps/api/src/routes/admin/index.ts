@@ -292,10 +292,32 @@ export async function adminRoutes(app: FastifyInstance) {
       .from(schema.devices)
       .groupBy(schema.devices.firmwareVersion);
 
+    // Daily aggregated stats
+    const daysAgo = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const dailyAgg = await db
+      .select({
+        date: sql<string>`date_trunc('day', ${schema.stats.date})::date`,
+        totalPlays: sql<number>`coalesce(sum(
+          coalesce((${schema.stats.prayerPlays}->>'fajr')::int, 0) +
+          coalesce((${schema.stats.prayerPlays}->>'dhuhr')::int, 0) +
+          coalesce((${schema.stats.prayerPlays}->>'asr')::int, 0) +
+          coalesce((${schema.stats.prayerPlays}->>'maghrib')::int, 0) +
+          coalesce((${schema.stats.prayerPlays}->>'isha')::int, 0)
+        ), 0)`,
+        totalErrors: sql<number>`coalesce(sum(${schema.stats.errors}), 0)`,
+        avgUptime: sql<number>`coalesce(avg(${schema.stats.uptime}), 0)`,
+        deviceCount: sql<number>`count(distinct ${schema.stats.deviceId})`,
+      })
+      .from(schema.stats)
+      .where(gte(schema.stats.date, daysAgo))
+      .groupBy(sql`date_trunc('day', ${schema.stats.date})::date`)
+      .orderBy(sql`date_trunc('day', ${schema.stats.date})::date`);
+
     return reply.send({
       totalDevices: Number(deviceCount.count),
       onlineDevices: Number(onlineCount.count),
       firmwareVersions: versionDist,
+      dailyStats: dailyAgg,
     });
   });
 }

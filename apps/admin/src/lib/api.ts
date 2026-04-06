@@ -53,4 +53,10 @@ export const api = {
     request<{ trigger: any }>('POST', `/api/admin/groups/${groupId}/sync`, { prayer }),
   getStats: (days = 7) =>
     request<{ totalDevices: number; onlineDevices: number; dailyStats: any[]; firmwareVersions: any[] }>('GET', `/api/admin/stats?days=${days}`),
+  getMapDevices: () =>
+    request<{ devices: any[] }>('GET', '/api/admin/analytics/map'),
+  sendDeviceCommand: (deviceId: string, command: string, payload?: Record<string, unknown>) =>
+    request<{ command: any }>('POST', `/api/admin/analytics/devices/${deviceId}/command`, { command, payload }),
+  getDeviceCommands: (deviceId: string) =>
+    request<{ commands: any[] }>('GET', `/api/admin/analytics/devices/${deviceId}/commands`),
 };

@@ -4,6 +4,7 @@ import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import { deviceRoutes } from './routes/device/index.js';
 import { adminRoutes } from './routes/admin/index.js';
+import { analyticsRoutes } from './routes/admin/analytics.js';
 
 // ── Environment validation ──────────────────────────────────
 const requiredEnv = ['DATABASE_URL'];
@@ -54,6 +55,7 @@ await app.register(rateLimit, {
 // ── Routes ──────────────────────────────────────────────────
 await app.register(deviceRoutes, { prefix: '/api/device' });
 await app.register(adminRoutes, { prefix: '/api/admin' });
+await app.register(analyticsRoutes, { prefix: '/api/admin/analytics' });
 
 // Health check
 app.get('/health', async () => ({

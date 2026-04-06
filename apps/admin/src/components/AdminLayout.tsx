@@ -4,6 +4,7 @@ import { clearToken } from '../lib/api';
 
 const NAV = [
   { path: '/', label: 'Dashboard' },
+  { path: '/map', label: 'Map' },
   { path: '/devices', label: 'Devices' },
   { path: '/releases', label: 'Releases' },
   { path: '/groups', label: 'Groups' },
