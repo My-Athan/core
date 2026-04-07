@@ -27,13 +27,19 @@ WORKDIR /app
 COPY package.json ./
 COPY --from=base /app/packages/shared/package.json ./packages/shared/
 COPY --from=base /app/packages/shared/dist ./packages/shared/dist
+COPY --from=base /app/packages/shared/src ./packages/shared/src
 COPY --from=base /app/apps/api/package.json ./apps/api/
 COPY --from=base /app/apps/api/dist ./apps/api/dist
+COPY --from=base /app/apps/api/src ./apps/api/src
+COPY --from=base /app/apps/api/drizzle.config.ts ./apps/api/
+COPY --from=base /app/tsconfig.base.json ./
+COPY --from=base /app/apps/api/tsconfig.json ./apps/api/
 
-# Install production deps only (recreates workspace symlinks)
+# Install production deps + drizzle-kit for migrations
 RUN npm install --workspace=apps/api --workspace=packages/shared --omit=dev
+RUN npm install drizzle-kit tsx --workspace=apps/api
 
 ENV NODE_ENV=production
 EXPOSE 3000
 WORKDIR /app/apps/api
-CMD ["node", "dist/index.js"]
+CMD ["sh", "-c", "npx drizzle-kit push --force && node dist/index.js"]
