@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import multipart from '@fastify/multipart';
 import { db, schema } from '../../db/index.js';
 import { adminAuth } from '../../middleware/device-auth.js';
-import { uploadFirmware, getFirmwareDownloadUrl } from '../../services/audio-catalog.js';
+import { uploadFirmware } from '../../services/audio-catalog.js';
 
 // ── Zod Schemas ─────────────────────────────────────────────
 
@@ -335,7 +335,6 @@ export async function adminRoutes(app: FastifyInstance) {
 
     // Upload to R2
     const key = await uploadFirmware(version, buffer);
-    const r2Url = await getFirmwareDownloadUrl(version);
 
     // Check for existing version
     const [existing] = await db
