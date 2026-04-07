@@ -32,7 +32,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 export const api = {
   login: (email: string, password: string) =>
-    request<{ token: string; user: { id: string; email: string; role: string } }>('POST', '/api/admin/auth/login', { email, password }),
+    request<{ token: string; user: { id: string; email: string; role: string }; mustChangePassword: boolean }>('POST', '/api/admin/auth/login', { email, password }),
+  setup: (email: string, password: string) =>
+    request<{ token: string; user: { id: string; email: string; role: string } }>('POST', '/api/admin/auth/setup', { email, password }),
   getDevices: (page = 1, limit = 50) =>
     request<{ devices: any[]; total: number }>('GET', `/api/admin/devices?page=${page}&limit=${limit}`),
   getDevice: (deviceId: string) =>

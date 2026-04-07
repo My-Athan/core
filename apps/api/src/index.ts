@@ -64,6 +64,10 @@ app.get('/health', async () => ({
   timestamp: new Date().toISOString(),
 }));
 
+// ── Seed default admin ─────────────────────────────────────
+import { seedDefaultAdmin } from './db/seed.js';
+await seedDefaultAdmin();
+
 // ── Start ───────────────────────────────────────────────────
 const port = parseInt(process.env.PORT || '3000');
 const host = process.env.HOST || '0.0.0.0';

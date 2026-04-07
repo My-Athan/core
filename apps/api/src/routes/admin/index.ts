@@ -8,6 +8,11 @@ import { adminAuth } from '../../middleware/device-auth.js';
 // ── Zod Schemas ─────────────────────────────────────────────
 
 const loginSchema = z.object({
+  email: z.string().max(255),  // Allow non-email for default 'admin' username
+  password: z.string().min(8).max(128),
+});
+
+const setupSchema = z.object({
   email: z.string().email().max(255),
   password: z.string().min(8).max(128),
 });
@@ -72,12 +77,81 @@ export async function adminRoutes(app: FastifyInstance) {
       { expiresIn: '24h' }
     );
 
-    return reply.send({ token, user: { id: user.id, email: user.email, role: user.role } });
+    return reply.send({
+      token,
+      user: { id: user.id, email: user.email, role: user.role },
+      mustChangePassword: user.mustChangePassword,
+    });
+  });
+
+  // ── POST /api/admin/auth/setup ───────────────────────────
+  // First-login setup: replace default admin with real credentials
+  app.post('/auth/setup', async (request, reply) => {
+    const parsed = setupSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
+    }
+
+    // Verify JWT from the default admin
+    let payload: { id: string; role: string };
+    try {
+      payload = await request.jwtVerify() as { id: string; role: string };
+    } catch {
+      return reply.status(401).send({ error: 'Invalid token' });
+    }
+
+    // Verify the user must change password
+    const [user] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, payload.id))
+      .limit(1);
+
+    if (!user || !user.mustChangePassword) {
+      return reply.status(403).send({ error: 'Account setup not required' });
+    }
+
+    const { email, password } = parsed.data;
+
+    // Check email isn't already taken by another user
+    const [existing] = await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
+
+    if (existing && existing.id !== user.id) {
+      return reply.status(409).send({ error: 'Email already in use' });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    // Update the default admin with real credentials
+    await db
+      .update(schema.users)
+      .set({
+        email,
+        passwordHash: hash,
+        mustChangePassword: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.users.id, user.id));
+
+    // Issue new token with updated email
+    const newToken = app.jwt.sign(
+      { id: user.id, email, role: user.role },
+      { expiresIn: '24h' }
+    );
+
+    return reply.send({
+      token: newToken,
+      user: { id: user.id, email, role: user.role },
+    });
   });
 
   // All routes below require admin auth
   app.addHook('preHandler', async (request, reply) => {
-    if (request.url === '/api/admin/auth/login') return;
+    if (request.url === '/api/admin/auth/login' || request.url === '/api/admin/auth/setup') return;
     return adminAuth(request, reply);
   });
 
