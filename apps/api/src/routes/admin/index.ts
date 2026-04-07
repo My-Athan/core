@@ -305,6 +305,64 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.send({ release: updated });
   });
 
+  // ── POST /api/admin/releases/upload ──────────────────────
+  // Multipart firmware binary upload
+  app.post('/releases/upload', async (request, reply) => {
+    const data = await request.file();
+    if (!data) {
+      return reply.status(400).send({ error: 'No file uploaded' });
+    }
+
+    const buffer = await data.toBuffer();
+
+    // Read form fields
+    const fields = data.fields as Record<string, { value?: string }>;
+    const version = fields.version?.value;
+    const hardwareType = fields.hardwareType?.value || 'esp32c3-v1';
+    const releaseNotes = fields.releaseNotes?.value || '';
+
+    if (!version || !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
+      return reply.status(400).send({ error: 'Invalid or missing version field' });
+    }
+
+    // Validate file size
+    if (buffer.length > 2 * 1024 * 1024) {
+      return reply.status(400).send({ error: 'File too large (max 2MB)' });
+    }
+
+    // Compute SHA256
+    const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+
+    // Upload to R2
+    const key = await uploadFirmware(version, buffer);
+    const r2Url = await getFirmwareDownloadUrl(version);
+
+    // Check for existing version
+    const [existing] = await db
+      .select().from(schema.releases)
+      .where(eq(schema.releases.version, version)).limit(1);
+
+    if (existing) return reply.status(409).send({ error: 'Version already exists' });
+
+    // Create release record
+    const [release] = await db
+      .insert(schema.releases)
+      .values({
+        version,
+        sha256,
+        size: buffer.length,
+        r2Url: key,
+        releaseNotes,
+        rolloutPercent: 0,
+        isStable: false,
+        autoUpdate: false,
+        hardwareType,
+      })
+      .returning();
+
+    return reply.status(201).send({ release });
+  });
+
   // ── POST /api/admin/groups ────────────────────────────────
   app.post('/groups', async (request, reply) => {
     const parsed = groupSchema.safeParse(request.body);
