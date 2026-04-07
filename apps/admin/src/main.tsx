@@ -9,6 +9,7 @@ import { Releases } from './pages/Releases';
 import { Groups } from './pages/Groups';
 import { Analytics } from './pages/Analytics';
 import { Map } from './pages/Map';
+import { Setup } from './pages/Setup';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('admin_token');
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/setup" element={<Setup />} />
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
         <Route path="/devices" element={<ProtectedRoute><Devices /></ProtectedRoute>} />

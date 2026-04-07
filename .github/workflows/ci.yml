@@ -16,16 +16,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # cache: 'npm'  # Requires package-lock.json
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Type check shared
         run: npm run lint --workspace=packages/shared
 
       - name: Type check API
         run: npm run lint --workspace=apps/api
+
+      - name: Type check admin
+        run: npm run lint --workspace=apps/admin
+
+      - name: Type check web
+        run: npm run lint --workspace=apps/web
 
   test-api:
     runs-on: ubuntu-latest
@@ -54,10 +60,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # cache: 'npm'  # Requires package-lock.json
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Push DB schema
         run: npm run db:push --workspace=apps/api
@@ -76,10 +82,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # cache: 'npm'  # Requires package-lock.json
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build shared
         run: npm run build --workspace=packages/shared

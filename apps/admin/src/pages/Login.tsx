@@ -14,7 +14,11 @@ export function Login() {
     try {
       const result = await api.login(email, password);
       setToken(result.token);
-      window.location.href = '/';
+      if (result.mustChangePassword) {
+        window.location.href = '/setup';
+      } else {
+        window.location.href = '/';
+      }
     } catch {
       setError('Invalid email or password');
     } finally {
@@ -28,8 +32,8 @@ export function Login() {
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24, textAlign: 'center' }}>MyAthan Admin</h1>
         {error && <div style={{ background: '#fee', color: '#c00', padding: 8, borderRadius: 6, marginBottom: 16, fontSize: 14 }}>{error}</div>}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', fontSize: 13, marginBottom: 4, color: '#555' }}>Email</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+          <label style={{ display: 'block', fontSize: 13, marginBottom: 4, color: '#555' }}>Username or Email</label>
+          <input type="text" value={email} onChange={e => setEmail(e.target.value)} required
             style={{ width: '100%', padding: 10, border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
         </div>
         <div style={{ marginBottom: 24 }}>
