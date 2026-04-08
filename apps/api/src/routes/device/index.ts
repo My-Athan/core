@@ -57,7 +57,9 @@ export async function deviceRoutes(app: FastifyInstance) {
   // ── POST /api/device/register ─────────────────────────────
   // Called once on first boot. Device sends its MAC-derived ID.
   // Server generates API key and stores the device.
-  app.post('/register', async (request, reply) => {
+  app.post('/register', {
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -103,6 +105,7 @@ export async function deviceRoutes(app: FastifyInstance) {
   // Device polls for config changes. Returns stored config.
   app.get('/config', {
     preHandler: deviceAuth,
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const device = (request as any).device;
     return reply.send({
@@ -118,6 +121,7 @@ export async function deviceRoutes(app: FastifyInstance) {
     Body: Record<string, unknown>;
   }>('/config', {
     preHandler: deviceAuth,
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const parsed = configUpdateSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -144,6 +148,7 @@ export async function deviceRoutes(app: FastifyInstance) {
   // ── POST /api/device/heartbeat ────────────────────────────
   app.post('/heartbeat', {
     preHandler: deviceAuth,
+    config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const parsed = heartbeatSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -243,7 +248,9 @@ export async function deviceRoutes(app: FastifyInstance) {
 
   // ── GET /api/device/timetable ─────────────────────────────
   // Server-side prayer time calculation (verification/fallback).
-  app.get('/timetable', async (request, reply) => {
+  app.get('/timetable', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = timetableSchema.safeParse(request.query);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -288,6 +295,7 @@ export async function deviceRoutes(app: FastifyInstance) {
     Querystring: { currentVersion: string; hardwareType?: string };
   }>('/ota/check', {
     preHandler: deviceAuth,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const { currentVersion, hardwareType: rawHardwareType } = request.query;
     const device = (request as any).device;
@@ -409,6 +417,7 @@ export async function deviceRoutes(app: FastifyInstance) {
   // Get pending multi-room sync triggers for this device's group.
   app.get('/sync', {
     preHandler: deviceAuth,
+    config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const device = (request as any).device;
 
