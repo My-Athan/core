@@ -22,6 +22,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'staging' }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 

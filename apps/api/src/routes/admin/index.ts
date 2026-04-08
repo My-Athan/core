@@ -76,7 +76,9 @@ export async function adminRoutes(app: FastifyInstance) {
   await app.register(multipart, { limits: { fileSize: 2 * 1024 * 1024 } });
 
   // ── POST /api/admin/auth/login ────────────────────────────
-  app.post('/auth/login', async (request, reply) => {
+  app.post('/auth/login', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -119,7 +121,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── POST /api/admin/auth/setup ───────────────────────────
   // First-login setup: replace default admin with real credentials
-  app.post('/auth/setup', async (request, reply) => {
+  app.post('/auth/setup', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = setupSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -207,13 +211,17 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── GET /api/admin/auth/me ────────────────────────────────
   // Protected by adminAuth preHandler above — no jwtVerify() needed in handler.
-  app.get('/auth/me', async (request, reply) => {
+  app.get('/auth/me', {
+    config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const user = (request as any).user as { id: string; email: string; role: string };
     return reply.send({ user });
   });
 
   // ── GET /api/admin/devices ────────────────────────────────
-  app.get('/devices', async (request, reply) => {
+  app.get('/devices', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const { page, limit } = paginationSchema.parse(request.query);
     const offset = (page - 1) * limit;
 
@@ -246,7 +254,9 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ── GET /api/admin/devices/:deviceId ──────────────────────
-  app.get<{ Params: { deviceId: string } }>('/devices/:deviceId', async (request, reply) => {
+  app.get<{ Params: { deviceId: string } }>('/devices/:deviceId', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const { deviceId } = request.params;
     if (!deviceId || deviceId.length > 32) {
       return reply.status(400).send({ error: 'Invalid deviceId' });
@@ -276,7 +286,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── PUT /api/admin/devices/:deviceId/config ───────────────
   app.put<{ Params: { deviceId: string }; Body: Record<string, unknown> }>(
-    '/devices/:deviceId/config', async (request, reply) => {
+    '/devices/:deviceId/config', {
+      config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
       const parsed = configUpdateSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send({ error: 'Invalid config' });
@@ -304,7 +316,9 @@ export async function adminRoutes(app: FastifyInstance) {
   );
 
   // ── GET /api/admin/releases ───────────────────────────────
-  app.get('/releases', async (_request, reply) => {
+  app.get('/releases', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, async (_request, reply) => {
     const releaseList = await db
       .select()
       .from(schema.releases)
@@ -313,7 +327,9 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ── POST /api/admin/releases ──────────────────────────────
-  app.post('/releases', async (request, reply) => {
+  app.post('/releases', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = releaseSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -341,7 +357,9 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ── PUT /api/admin/releases/:version ──────────────────────
-  app.put<{ Params: { version: string } }>('/releases/:version', async (request, reply) => {
+  app.put<{ Params: { version: string } }>('/releases/:version', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = releaseUpdateSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -359,7 +377,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── POST /api/admin/releases/upload ──────────────────────
   // Multipart firmware binary upload
-  app.post('/releases/upload', async (request, reply) => {
+  app.post('/releases/upload', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const data = await request.file();
     if (!data) {
       return reply.status(400).send({ error: 'No file uploaded' });
@@ -415,7 +435,9 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ── POST /api/admin/groups ────────────────────────────────
-  app.post('/groups', async (request, reply) => {
+  app.post('/groups', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = groupSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -439,7 +461,9 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ── GET /api/admin/groups — fixed N+1 with subquery ───────
-  app.get('/groups', async (_request, reply) => {
+  app.get('/groups', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, async (_request, reply) => {
     const groups = await db
       .select({
         id: schema.deviceGroups.id,
@@ -455,7 +479,9 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ── POST /api/admin/groups/:id/sync ───────────────────────
-  app.post<{ Params: { id: string } }>('/groups/:id/sync', async (request, reply) => {
+  app.post<{ Params: { id: string } }>('/groups/:id/sync', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = syncSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -472,7 +498,9 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ── GET /api/admin/stats ──────────────────────────────────
-  app.get<{ Querystring: { days?: string } }>('/stats', async (request, reply) => {
+  app.get<{ Querystring: { days?: string } }>('/stats', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const days = Math.min(90, Math.max(1, parseInt(request.query.days || '7')));
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
 
