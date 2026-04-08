@@ -190,7 +190,9 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ── GET /api/admin/auth/me ────────────────────────────────
-  app.get('/auth/me', async (request, reply) => {
+  app.get('/auth/me', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     try {
       const payload = await request.jwtVerify() as { id: string; email: string; role: string };
       return reply.send({ user: { id: payload.id, email: payload.email, role: payload.role } });
