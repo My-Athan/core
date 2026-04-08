@@ -8,6 +8,24 @@ import type { DeviceStatus, DeviceConfig } from '@myathan/shared';
 const LOCAL_BASE = 'http://myathan.local';
 const TIMEOUT_MS = 10000;  // 10 second timeout
 
+const MIN_PRAYER_INDEX = 0;
+const MAX_PRAYER_INDEX = 4;
+const MIN_TRACK_NUMBER = 1;
+const MAX_TRACK_NUMBER = 999;
+const MIN_VOLUME = 0;
+const MAX_VOLUME = 30;
+
+export interface DeviceTimetableEntry {
+  date: string;
+  prayer: string;
+  time: string;
+  [key: string]: string | number | boolean | null;
+}
+
+export interface DeviceTimetable {
+  [key: string]: DeviceTimetableEntry | DeviceTimetableEntry[];
+}
+
 async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -35,23 +53,28 @@ export class DeviceAPI {
     return res.json();
   }
 
-  async getTimetable(): Promise<any> {
+  async getTimetable(): Promise<DeviceTimetable> {
     const res = await fetchWithTimeout(`${this.baseUrl}/timetable`);
-    return res.json();
+    return (await res.json()) as DeviceTimetable;
   }
 
   async triggerAthan(prayer: number): Promise<void> {
-    const params = new URLSearchParams({ prayer: String(Math.max(0, Math.min(4, prayer))) });
+    const params = new URLSearchParams({
+      prayer: String(Math.max(MIN_PRAYER_INDEX, Math.min(MAX_PRAYER_INDEX, prayer))),
+    });
     await fetchWithTimeout(`${this.baseUrl}/trigger?${params}`, { method: 'POST' });
   }
 
   async previewTrack(track: number): Promise<void> {
-    const params = new URLSearchParams({ track: String(Math.max(1, Math.min(999, track))) });
+    const params = new URLSearchParams({
+      track: String(Math.max(MIN_TRACK_NUMBER, Math.min(MAX_TRACK_NUMBER, track))),
+    });
     await fetchWithTimeout(`${this.baseUrl}/preview?${params}`, { method: 'POST' });
   }
 
   async setVolume(level: number): Promise<void> {
-    const params = new URLSearchParams({ level: String(Math.max(0, Math.min(30, level))) });
+    const clampedLevel = Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, level));
+    const params = new URLSearchParams({ level: String(clampedLevel) });
     await fetchWithTimeout(`${this.baseUrl}/volume?${params}`, { method: 'POST' });
   }
 

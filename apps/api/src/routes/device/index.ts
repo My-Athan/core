@@ -289,10 +289,15 @@ export async function deviceRoutes(app: FastifyInstance) {
   }>('/ota/check', {
     preHandler: deviceAuth,
   }, async (request, reply) => {
-    const { currentVersion, hardwareType } = request.query;
+    const { currentVersion, hardwareType: rawHardwareType } = request.query;
     const device = (request as any).device;
 
-    // Update device hardware type if provided
+    const ALLOWED_HARDWARE_TYPES = ['esp32c3-v1', 'esp32-s3-v1', 'esp32-s3-v2'] as const;
+    const hardwareType = (ALLOWED_HARDWARE_TYPES as readonly string[]).includes(rawHardwareType ?? '')
+      ? rawHardwareType
+      : undefined;
+
+    // Update device hardware type if provided and valid
     if (hardwareType) {
       await db
         .update(schema.devices)

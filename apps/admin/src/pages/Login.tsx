@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api, setToken } from '../lib/api';
+import { api } from '../lib/api';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -13,7 +13,6 @@ export function Login() {
     setLoading(true);
     try {
       const result = await api.login(email, password);
-      setToken(result.token);
       if (result.mustChangePassword) {
         window.location.href = '/setup';
       } else {

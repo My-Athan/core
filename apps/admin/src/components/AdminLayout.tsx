@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { clearToken } from '../lib/api';
+import { api } from '../lib/api';
 
 const NAV = [
   { path: '/', label: 'Dashboard' },
@@ -33,7 +33,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div style={{ position: 'absolute', bottom: 20, left: 0, width: 220, padding: '0 20px' }}>
-          <button onClick={() => { clearToken(); window.location.href = '/login'; }}
+          <button onClick={() => { api.logout().finally(() => { window.location.href = '/login'; }); }}
             style={{ color: '#888', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>
             Logout
           </button>

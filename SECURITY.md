@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-MyAthan Core is pre-1.0 software under active development. Only the latest version on `main` receives security updates.
+My-Athan Core is pre-1.0 software under active development. Only the latest version on `main` receives security updates.
 
 | Version | Supported |
 | ------- | --------- |
@@ -93,7 +93,7 @@ The following are in scope for security reports:
 
 ## Known Limitations
 
-- **npm dependency scanning**: Dependabot is configured for GitHub Actions only, not npm packages. npm dependency updates are currently manual.
+- **npm dependency scanning**: npm packages are monitored automatically (e.g., via Dependabot and `npm audit` in CI), but dependency updates may still require manual review and merging.
 - **No WAF**: Single VPS deployment without a Web Application Firewall.
 - **No admin 2FA**: The admin dashboard uses password-only authentication.
 - **Development fallbacks**: JWT secret and API key salt fall back to random values in development mode. This is intentional for DX and does not affect production.

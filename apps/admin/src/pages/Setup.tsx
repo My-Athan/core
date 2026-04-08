@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api, setToken } from '../lib/api';
+import { api } from '../lib/api';
 
 export function Setup() {
   const [email, setEmail] = useState('');
@@ -23,8 +23,7 @@ export function Setup() {
 
     setLoading(true);
     try {
-      const result = await api.setup(email, password);
-      setToken(result.token);
+      await api.setup(email, password);
       window.location.href = '/';
     } catch (err: any) {
       setError('Setup failed. Please try again.');

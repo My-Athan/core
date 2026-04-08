@@ -103,8 +103,15 @@ export async function adminRoutes(app: FastifyInstance) {
       { expiresIn: '24h' }
     );
 
+    reply.setCookie('admin_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/api/admin',
+      maxAge: 86400,
+    });
+
     return reply.send({
-      token,
       user: { id: user.id, email: user.email, role: user.role },
       mustChangePassword: user.mustChangePassword,
     });
@@ -169,16 +176,40 @@ export async function adminRoutes(app: FastifyInstance) {
       { expiresIn: '24h' }
     );
 
+    reply.setCookie('admin_session', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/api/admin',
+      maxAge: 86400,
+    });
+
     return reply.send({
-      token: newToken,
       user: { id: user.id, email, role: user.role },
     });
   });
 
+  // ── POST /api/admin/auth/logout ───────────────────────────
+  // Open (no auth required) — just clears the session cookie.
+  app.post('/auth/logout', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, async (_request, reply) => {
+    reply.clearCookie('admin_session', { path: '/api/admin' });
+    return reply.send({ ok: true });
+  });
+
   // All routes below require admin auth
   app.addHook('preHandler', async (request, reply) => {
-    if (request.url === '/api/admin/auth/login' || request.url === '/api/admin/auth/setup') return;
+    const openPaths = ['/api/admin/auth/login', '/api/admin/auth/setup', '/api/admin/auth/logout'];
+    if (openPaths.includes(request.url)) return;
     return adminAuth(request, reply);
+  });
+
+  // ── GET /api/admin/auth/me ────────────────────────────────
+  // Protected by adminAuth preHandler above — no jwtVerify() needed in handler.
+  app.get('/auth/me', async (request, reply) => {
+    const user = (request as any).user as { id: string; email: string; role: string };
+    return reply.send({ user });
   });
 
   // ── GET /api/admin/devices ────────────────────────────────

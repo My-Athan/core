@@ -1,5 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import crypto from 'node:crypto';
@@ -19,11 +21,6 @@ for (const key of requiredEnv) {
   }
 }
 
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.error('FATAL: JWT_SECRET must be set in production');
-  process.exit(1);
-}
-
 const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || 'info',
@@ -32,23 +29,35 @@ const app = Fastify({
 
 // ── Plugins ─────────────────────────────────────────────────
 
-// CORS: restrict to known origins in production
+// Security headers
+await app.register(helmet, {
+  contentSecurityPolicy: false, // Configured at reverse-proxy level
+});
+
+// Cookie support (must be before JWT so JWT can read cookies)
+await app.register(cookie);
+
+// CORS: restrict to known origins always (never use true)
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',')
   : ['http://localhost:5173', 'http://localhost:5174'];
 
 await app.register(cors, {
-  origin: process.env.NODE_ENV === 'production' ? allowedOrigins : true,
+  origin: allowedOrigins,
   credentials: true,
 });
 
-// JWT
+// JWT — also accepts admin_session cookie
 const jwtSecret = process.env.JWT_SECRET || (() => {
   console.warn('[WARN] JWT_SECRET not set — using random dev secret (sessions will not persist across restarts)');
   return crypto.randomBytes(32).toString('hex');
 })();
 await app.register(jwt, {
   secret: jwtSecret,
+  cookie: {
+    cookieName: 'admin_session',
+    signed: false,
+  },
 });
 
 // Rate limiting

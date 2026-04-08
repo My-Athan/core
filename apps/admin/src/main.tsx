@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminLayout } from './components/AdminLayout';
@@ -10,10 +10,19 @@ import { Groups } from './pages/Groups';
 import { Analytics } from './pages/Analytics';
 import { Map } from './pages/Map';
 import { Setup } from './pages/Setup';
+import { api } from './lib/api';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('admin_token');
-  if (!token) return <Navigate to="/login" replace />;
+  const [status, setStatus] = useState<'loading' | 'ok' | 'unauth'>('loading');
+
+  useEffect(() => {
+    api.me()
+      .then(() => setStatus('ok'))
+      .catch(() => setStatus('unauth'));
+  }, []);
+
+  if (status === 'loading') return null;
+  if (status === 'unauth') return <Navigate to="/login" replace />;
   return <AdminLayout>{children}</AdminLayout>;
 }
 

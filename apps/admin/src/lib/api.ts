@@ -1,28 +1,26 @@
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Use relative URLs so the Vite proxy (dev) or same-domain routing (prod) handles API requests.
+// This ensures the httpOnly admin_session cookie is same-site and works without CORS credentials.
+const BASE = import.meta.env.VITE_API_URL ?? '';
 
-let token = localStorage.getItem('admin_token') || '';
-
-export function setToken(t: string) {
-  token = t;
-  localStorage.setItem('admin_token', t);
-}
-
-export function clearToken() {
-  token = '';
-  localStorage.removeItem('admin_token');
+function buildQuery(params: Record<string, string | number | boolean | null | undefined>): string {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+    searchParams.append(key, String(value));
+  }
+  return searchParams.toString();
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
   if (res.status === 401) {
-    clearToken();
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
@@ -32,13 +30,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 export const api = {
   login: (email: string, password: string) =>
-    request<{ token: string; user: { id: string; email: string; role: string }; mustChangePassword: boolean }>('POST', '/api/admin/auth/login', { email, password }),
+    request<{ user: { id: string; email: string; role: string }; mustChangePassword: boolean }>('POST', '/api/admin/auth/login', { email, password }),
   setup: (email: string, password: string) =>
-    request<{ token: string; user: { id: string; email: string; role: string } }>('POST', '/api/admin/auth/setup', { email, password }),
-  getDevices: (page = 1, limit = 50) => {
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    return request<{ devices: any[]; total: number }>('GET', `/api/admin/devices?${params}`);
-  },
+    request<{ user: { id: string; email: string; role: string } }>('POST', '/api/admin/auth/setup', { email, password }),
+  me: () =>
+    request<{ user: { id: string; email: string; role: string } }>('GET', '/api/admin/auth/me'),
+  logout: () =>
+    request<{ ok: boolean }>('POST', '/api/admin/auth/logout'),
+  getDevices: (page = 1, limit = 50) =>
+    request<{ devices: any[]; total: number }>('GET', `/api/admin/devices?${buildQuery({ page, limit })}`),
   getDevice: (deviceId: string) =>
     request<{ device: any; stats: any[] }>('GET', `/api/admin/devices/${encodeURIComponent(deviceId)}`),
   updateDeviceConfig: (deviceId: string, config: Record<string, unknown>) =>
@@ -55,10 +55,8 @@ export const api = {
     request<{ group: any }>('POST', '/api/admin/groups', { name, deviceIds }),
   triggerSync: (groupId: string, prayer: number) =>
     request<{ trigger: any }>('POST', `/api/admin/groups/${encodeURIComponent(groupId)}/sync`, { prayer }),
-  getStats: (days = 7) => {
-    const params = new URLSearchParams({ days: String(days) });
-    return request<{ totalDevices: number; onlineDevices: number; dailyStats: any[]; firmwareVersions: any[] }>('GET', `/api/admin/stats?${params}`);
-  },
+  getStats: (days = 7) =>
+    request<{ totalDevices: number; onlineDevices: number; dailyStats: any[]; firmwareVersions: any[] }>('GET', `/api/admin/stats?${buildQuery({ days })}`),
   getMapDevices: () =>
     request<{ devices: any[] }>('GET', '/api/admin/analytics/map'),
   sendDeviceCommand: (deviceId: string, command: string, payload?: Record<string, unknown>) =>
@@ -71,10 +69,9 @@ export const api = {
     form.append('version', version);
     form.append('hardwareType', hardwareType);
     if (releaseNotes) form.append('releaseNotes', releaseNotes);
-    // Use fetch directly since request() sets Content-Type to JSON
     return fetch(`${BASE}/api/admin/releases/upload`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
       body: form,
     }).then(r => r.json());
   },

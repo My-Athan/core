@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PrayerCard } from '../components/PrayerCard';
 import { HijriDateDisplay } from '../components/HijriDateDisplay';
-import { deviceApi } from '../lib/device-api';
 import type { PrayerTimesResponse } from '@myathan/shared';
 
 const PRAYER_NAMES = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useDeviceStatus } from '../hooks/useDevice';
-import { PrayerCard } from '../components/PrayerCard';
 import { HijriDateDisplay } from '../components/HijriDateDisplay';
 
 const PRAYER_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
