@@ -119,7 +119,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── POST /api/admin/auth/setup ───────────────────────────
   // First-login setup: replace default admin with real credentials
-  app.post('/auth/setup', async (request, reply) => {
+  app.post('/auth/setup', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = setupSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
