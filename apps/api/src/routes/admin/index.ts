@@ -189,19 +189,8 @@ export async function adminRoutes(app: FastifyInstance) {
     });
   });
 
-  // ── GET /api/admin/auth/me ────────────────────────────────
-  app.get('/auth/me', {
-    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
-  }, async (request, reply) => {
-    try {
-      const payload = await request.jwtVerify() as { id: string; email: string; role: string };
-      return reply.send({ user: { id: payload.id, email: payload.email, role: payload.role } });
-    } catch {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
-  });
-
   // ── POST /api/admin/auth/logout ───────────────────────────
+  // Open (no auth required) — just clears the session cookie.
   app.post('/auth/logout', {
     config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
   }, async (_request, reply) => {
@@ -209,11 +198,18 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
-  // All routes below require admin auth (auth/me and auth/logout handle their own auth)
+  // All routes below require admin auth
   app.addHook('preHandler', async (request, reply) => {
-    const openPaths = ['/api/admin/auth/login', '/api/admin/auth/setup', '/api/admin/auth/me', '/api/admin/auth/logout'];
+    const openPaths = ['/api/admin/auth/login', '/api/admin/auth/setup', '/api/admin/auth/logout'];
     if (openPaths.includes(request.url)) return;
     return adminAuth(request, reply);
+  });
+
+  // ── GET /api/admin/auth/me ────────────────────────────────
+  // Protected by adminAuth preHandler above — no jwtVerify() needed in handler.
+  app.get('/auth/me', async (request, reply) => {
+    const user = (request as any).user as { id: string; email: string; role: string };
+    return reply.send({ user });
   });
 
   // ── GET /api/admin/devices ────────────────────────────────
