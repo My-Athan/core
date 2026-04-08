@@ -18,7 +18,7 @@
     "@fastify/cors": "^10.0.0",
     "@fastify/jwt": "^9.0.0",
     "@fastify/multipart": "^9.0.0",
-    "drizzle-orm": "^0.35.0",
+    "drizzle-orm": "^0.45.2",
     "pg": "^8.13.0",
     "adhan": "^4.4.0",
     "zod": "^3.23.0",
