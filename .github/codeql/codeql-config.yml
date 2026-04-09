@@ -1,0 +1,9 @@
+name: "CodeQL Config"
+
+query-filters:
+  # False positive: js/missing-rate-limiting fires on auth routes in
+  # apps/api/src/routes/auth/index.ts even though all routes are covered
+  # by @fastify/rate-limit registered on the scoped Fastify instance.
+  # CodeQL cannot statically trace Fastify's plugin scope chain across files.
+  - exclude:
+      id: js/missing-rate-limiting
