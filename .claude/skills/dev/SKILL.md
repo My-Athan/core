@@ -2,7 +2,7 @@
 name: dev
 description: Start development servers for API, PWA, or admin. Use when developing, running, or debugging locally.
 disable-model-invocation: true
-allowed-tools: Bash Read
+allowed-tools: Bash Read Glob
 argument-hint: "[api|web|admin|all]"
 ---
 
