@@ -3,11 +3,12 @@
  * Supports: Email/password + Google OAuth for PWA users.
  * Admin portal uses a separate auth system (/api/admin/auth).
  */
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { db, schema } from '../../db/index.js';
+import { appAuth, googleTokenAuth } from '../../middleware/app-auth.js';
 
 const registerSchema = z.object({
   email: z.string().email().max(255),
@@ -18,11 +19,6 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email().max(255),
   password: z.string().min(1).max(128),
-});
-
-const googleSchema = z.object({
-  // ID token from Google Sign-In SDK on the client
-  idToken: z.string().min(1).max(4096),
 });
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -39,67 +35,6 @@ function setCookieForApp(reply: any, token: string) {
     path: '/api/auth',
     maxAge: 30 * 86400,
   });
-}
-
-// ── App JWT Middleware ────────────────────────────────────────
-// Used as a preHandler so route handlers don't call jwtVerify() directly.
-// This mirrors the adminAuth pattern used in the admin routes.
-async function appAuth(request: FastifyRequest, reply: FastifyReply) {
-  try {
-    const payload = await request.jwtVerify() as { id: string; email: string; type: string };
-    if (payload.type !== 'app') {
-      return reply.status(403).send({ error: 'Invalid token type' });
-    }
-    (request as any).appUser = payload;
-  } catch {
-    return reply.status(401).send({ error: 'Not authenticated' });
-  }
-}
-
-// ── Google Token Middleware ───────────────────────────────────
-// Validates Google ID token and attaches the verified payload to the request.
-// Moved out of the route handler body so CodeQL doesn't flag the route for
-// performing authorization without rate limiting.
-async function googleTokenAuth(request: FastifyRequest, reply: FastifyReply) {
-  const parsed = googleSchema.safeParse(request.body);
-  if (!parsed.success) {
-    return reply.status(400).send({ error: 'Invalid input' });
-  }
-
-  const [config] = await db
-    .select()
-    .from(schema.ssoConfig)
-    .where(eq(schema.ssoConfig.provider, 'google'))
-    .limit(1);
-
-  if (!config?.enabled || !config.clientId) {
-    return reply.status(401).send({ error: 'Google SSO not configured' });
-  }
-
-  try {
-    const parts = parsed.data.idToken.split('.');
-    if (parts.length !== 3) throw new Error('invalid token structure');
-    const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-
-    if (claims.aud !== config.clientId) throw new Error('audience mismatch');
-    if (!['accounts.google.com', 'https://accounts.google.com'].includes(claims.iss)) throw new Error('issuer mismatch');
-    if (claims.exp < Math.floor(Date.now() / 1000)) throw new Error('token expired');
-    if (!claims.email_verified) {
-      return reply.status(401).send({ error: 'Google account email not verified' });
-    }
-
-    (request as any).googleClaims = {
-      sub: claims.sub as string,
-      email: claims.email as string,
-      name: claims.name as string | undefined,
-    };
-  } catch (err: any) {
-    if (err.message !== 'token expired' &&
-        err.message !== 'audience mismatch' &&
-        err.message !== 'issuer mismatch' &&
-        err.message !== 'invalid token structure') throw err;
-    return reply.status(401).send({ error: 'Invalid or expired Google token' });
-  }
 }
 
 export async function appAuthRoutes(app: FastifyInstance) {
