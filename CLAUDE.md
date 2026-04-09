@@ -47,17 +47,52 @@ RamadanSettings, MultiRoom, DeviceSettings
 - Admin dev: `npm run dev:admin`
 - DB migrate: `npm run db:push --workspace=apps/api`
 
-## Claude Model Guidance
+## Claude Model & Configuration Rules
 
-| Task | Model | Why |
-|------|-------|-----|
-| Architecture decisions, cross-repo schema changes | **Opus** | Deep reasoning across API, shared types, firmware |
-| Complex refactors spanning multiple workspaces | **Opus** | Needs to track cascading type changes |
-| Feature implementation, bug fixes | **Sonnet** | Good speed/quality for well-scoped coding |
-| API endpoint implementation | **Sonnet** | Clear patterns with Fastify + Drizzle |
-| Code review | **Sonnet** | Checklist-driven analysis |
-| Simple questions, formatting, config edits | **Haiku** | Fast for low-complexity work |
-| Running build/test/lint commands | **Haiku** | CLI execution, minimal reasoning |
+### Decision Matrix — Pick the cheapest option that gets the job done
+
+| Task | Model | Version | Effort | Thinking | 1M | Cost Tier |
+|------|-------|---------|--------|----------|----|-----------|
+| Architecture decisions, cross-repo schema changes | **Opus** | 4.6 | max | ON | if >50 files | $$$$ |
+| Complex refactors spanning multiple workspaces | **Opus** | 4.6 | high | ON | if >50 files | $$$$ |
+| Database schema design + migration planning | **Opus** | 4.6 | high | ON | no | $$$ |
+| Debugging complex multi-file issues | **Opus** | 4.6 | high | ON | if needed | $$$ |
+| Feature implementation (multi-file) | **Sonnet** | 4.6 | high | OFF | no | $$ |
+| Bug fixes, single-feature work | **Sonnet** | 4.6 | med | OFF | no | $$ |
+| API endpoint implementation | **Sonnet** | 4.6 | med | OFF | no | $$ |
+| Code review | **Sonnet** | 4.6 | high | OFF | no | $$ |
+| TypeScript type definitions | **Sonnet** | 4.6 | med | OFF | no | $$ |
+| Simple questions, formatting, config edits | **Haiku** | 4.5 | low | OFF | no | $ |
+| Running build/test/lint/dev commands | **Haiku** | 4.5 | low | OFF | no | $ |
+| Git operations, file lookups | **Haiku** | 4.5 | low | OFF | no | $ |
+
+### Automation Rules
+
+**Version selection:**
+- Always use **4.6** for Opus and Sonnet — latest generation, strictly better
+- Haiku is **4.5** only (latest available)
+
+**When to enable thinking:**
+- ON: Multi-step logic, debugging across files, algorithm design, schema cascades
+- OFF: Everything else — thinking burns output tokens with diminishing returns on simple tasks
+
+**When to use 1M context:**
+- Only when actively reading/analyzing >50 files or files >5000 lines in a single session
+- Never for single-file edits, CLI commands, or standard feature work
+- This repo has ~30 source files — standard context handles it fine for most tasks
+
+**Effort level guide:**
+- `max`: Only for architectural decisions where a wrong call is expensive to undo
+- `high`: Multi-file changes, debugging, code review, anything safety-critical
+- `med`: Standard feature work, bug fixes, well-scoped single tasks
+- `low`: CLI execution, simple lookups, formatting, git commands
+
+**Cost awareness (relative per task):**
+- Haiku 4.5 low/no-think = **1x baseline** (~$0.25/M in, $1.25/M out)
+- Sonnet 4.6 med/no-think = **~12x** (~$3/M in, $15/M out)
+- Opus 4.6 high/thinking = **~100x** (~$15/M in, $75/M out + thinking tokens)
+- 1M context adds premium on top — only use when standard context is genuinely insufficient
+- **Default to Sonnet 4.6 med/no-think** unless the task clearly needs more or less
 
 ## Common Development Patterns
 
