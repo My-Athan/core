@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useDeviceStatus } from '../hooks/useDevice';
 import { HijriDateDisplay } from '../components/HijriDateDisplay';
+import { deviceApi } from '../lib/device-api';
 
 const PRAYER_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
@@ -57,13 +58,13 @@ export function Home() {
       {/* Quick Actions */}
       <div className="flex gap-2">
         <button
-          onClick={() => fetch('http://myathan.local/trigger?prayer=' + (status.prayer?.nextIndex ?? 0), { method: 'POST' })}
+          onClick={() => deviceApi.triggerAthan(status.prayer?.nextIndex ?? 0)}
           className="flex-1 bg-emerald-700 text-white py-3 rounded-xl font-medium"
         >
           Play Athan
         </button>
         <button
-          onClick={() => fetch('http://myathan.local/preview?track=1', { method: 'POST' })}
+          onClick={() => deviceApi.previewTrack(1)}
           className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-medium"
         >
           Preview

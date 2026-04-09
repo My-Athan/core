@@ -1,22 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { PrayerCard } from '../components/PrayerCard';
 import { HijriDateDisplay } from '../components/HijriDateDisplay';
-import type { PrayerTimesResponse } from '@myathan/shared';
+import type { PrayerTimesResponse, DeviceStatus } from '@myathan/shared';
+import { deviceApi } from '../lib/device-api';
 
 const PRAYER_NAMES = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 const PRAYER_KEYS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
 
+/**
+ * Determines whether a prayer card should be highlighted as "next".
+ * Sunrise is intentionally excluded from the fallback mapping logic.
+ */
+function isNextPrayerCard(key: typeof PRAYER_KEYS[number], idx: number, nextIndex: number): boolean {
+  if (idx === nextIndex) return true;
+  if (key === 'sunrise') return false;
+  return idx - (idx > 0 ? 1 : 0) === nextIndex;
+}
+
 export function PrayerTimes() {
-  const [timetable, setTimetable] = useState<any>(null);
-  const [status, setStatus] = useState<any>(null);
+  const [timetable, setTimetable] = useState<PrayerTimesResponse | null>(null);
+  const [status, setStatus] = useState<DeviceStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
         const [tt, st] = await Promise.all([
-          fetch('http://myathan.local/timetable').then(r => r.json()),
-          fetch('http://myathan.local/status').then(r => r.json()),
+          deviceApi.getTimetable(),
+          deviceApi.getStatus(),
         ]);
         setTimetable(tt);
         setStatus(st);
@@ -61,7 +72,7 @@ export function PrayerTimes() {
             key={key}
             name={PRAYER_NAMES[idx]}
             time={timetable.today[key] || '--:--'}
-            isNext={idx === nextIdx || (key === 'sunrise' ? false : idx - (idx > 0 ? 1 : 0) === nextIdx)}
+            isNext={isNextPrayerCard(key, idx, nextIdx)}
             minutesUntil={idx === nextIdx ? nextMinutes : undefined}
           />
         ))}

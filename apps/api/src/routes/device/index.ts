@@ -8,6 +8,10 @@ import { gregorianToHijri, isRamadan, getHoliday } from '../../services/hijri.js
 import type { CalcMethod, AsrJuristic } from '@myathan/shared';
 import { compareSemver, hashDeviceId } from '../../utils/semver.js';
 
+// ── Shared Constants ─────────────────────────────────────────
+const ALLOWED_HARDWARE_TYPES = ['esp32c3-v1', 'esp32-s3-v1', 'esp32-s3-v2'] as const;
+const DEFAULT_HARDWARE_TYPE = ALLOWED_HARDWARE_TYPES[0];
+
 // ── Zod Schemas ─────────────────────────────────────────────
 const registerSchema = z.object({
   deviceId: z.string().regex(/^myathan-[a-f0-9]{6}$/).max(32),
@@ -300,7 +304,6 @@ export async function deviceRoutes(app: FastifyInstance) {
     const { currentVersion, hardwareType: rawHardwareType } = request.query;
     const device = (request as any).device;
 
-    const ALLOWED_HARDWARE_TYPES = ['esp32c3-v1', 'esp32-s3-v1', 'esp32-s3-v2'] as const;
     const hardwareType = (ALLOWED_HARDWARE_TYPES as readonly string[]).includes(rawHardwareType ?? '')
       ? rawHardwareType
       : undefined;
@@ -313,7 +316,7 @@ export async function deviceRoutes(app: FastifyInstance) {
         .where(eq(schema.devices.id, device.id));
     }
 
-    const hwType = hardwareType || device.hardwareType || 'esp32c3-v1';
+    const hwType = hardwareType || device.hardwareType || DEFAULT_HARDWARE_TYPE;
 
     // Find latest stable release with autoUpdate enabled for this hardware type
     const [latest] = await db

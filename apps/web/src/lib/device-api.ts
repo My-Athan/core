@@ -1,4 +1,4 @@
-import type { DeviceStatus, DeviceConfig } from '@myathan/shared';
+import type { DeviceStatus, DeviceConfig, PrayerTimesResponse } from '@myathan/shared';
 
 // ─────────────────────────────────────────────────────────────
 // Device API Client — communicates with MyAthan device
@@ -53,9 +53,9 @@ export class DeviceAPI {
     return res.json();
   }
 
-  async getTimetable(): Promise<DeviceTimetable> {
+  async getTimetable(): Promise<PrayerTimesResponse> {
     const res = await fetchWithTimeout(`${this.baseUrl}/timetable`);
-    return (await res.json()) as DeviceTimetable;
+    return res.json();
   }
 
   async triggerAthan(prayer: number): Promise<void> {
