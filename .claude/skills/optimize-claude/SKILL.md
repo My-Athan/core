@@ -114,10 +114,24 @@ When reviewing any skill, verify:
 - **Error recovery**: Skills that run commands should include "On Failure" instructions
 - **Context**: Skills should reference project-specific paths, constraints, and patterns
 
-## Token Efficiency Tips
+## Token Efficiency & Caching Tips
 
-- CLAUDE.md should be under 100 lines — dense, structured, no prose
-- Use tables and lists over paragraphs
-- Include file paths so Claude doesn't need to search
+- CLAUDE.md should be under 120 lines — dense, structured, no prose
+- Use tables and lists over paragraphs (30-50% fewer tokens than prose)
+- Include file paths so Claude doesn't need to search (saves Grep/Glob tool calls)
 - Reference specific types/functions by name
 - Keep cross-repo sync notes brief but actionable
+- Put stable content at top of CLAUDE.md, volatile content at bottom (prompt caching works top-down)
+- Avoid rewriting CLAUDE.md frequently — each edit invalidates the prompt cache
+
+## Caching & Compression Audit
+
+When auditing, also check:
+- [ ] CLAUDE.md has stable content (tech stack, architecture) at the top
+- [ ] CLAUDE.md has volatile content (branch names, current sprint) at the bottom
+- [ ] CLAUDE.md line count is under 120 (longer = more cached tokens but also more cost)
+- [ ] Skills with `disable-model-invocation: true` are truly CLI-only (saves reasoning tokens)
+- [ ] settings.json auto-allows read-only tools (saves permission round-trip tokens)
+- [ ] No duplicate information between CLAUDE.md and README.md (wasted cached tokens)
+- [ ] Cost & performance optimization section exists in CLAUDE.md
+- [ ] Subagent delegation patterns documented (use cheap models for search, expensive for reasoning)
