@@ -3,14 +3,16 @@ name: CodeQL
 on:
   push:
   pull_request:
-    branches: [main]
   schedule:
     - cron: '0 4 * * 1'
 
-# One run per branch at a time — cancels the push-triggered run when the
-# pull_request event fires for the same commit, preventing duplicate uploads.
+# One run per branch at a time.
+# github.head_ref is set for pull_request events (the feature branch name).
+# github.ref_name is set for push events (also the branch name).
+# Both resolve to the same value for a given branch, so push-triggered runs
+# are cancelled when the pull_request event fires for the same commit.
 concurrency:
-  group: codeql-${{ github.head_ref || github.ref }}
+  group: codeql-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
