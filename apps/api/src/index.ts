@@ -74,7 +74,7 @@ await app.register(analyticsRoutes, { prefix: '/api/admin/analytics' });
 // Health check
 app.get('/health', async () => ({
   status: 'ok',
-  version: '0.2.0',
+  version: '0.2.1',
   timestamp: new Date().toISOString(),
 }));
 
