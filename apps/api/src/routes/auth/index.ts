@@ -24,7 +24,7 @@ const loginSchema = z.object({
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function getDisplayName(displayName: string | undefined, email: string): string {
+function getDisplayName(displayName: string | null | undefined, email: string): string {
   return displayName || email.split('@')[0];
 }
 
