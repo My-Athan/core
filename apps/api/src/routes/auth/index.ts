@@ -7,7 +7,6 @@ import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import crypto from 'node:crypto';
 import { db, schema } from '../../db/index.js';
 
 const registerSchema = z.object({
@@ -91,7 +90,9 @@ export async function appAuthRoutes(app: FastifyInstance) {
   });
 
   // ── POST /api/auth/register ───────────────────────────────
-  app.post('/register', async (request, reply) => {
+  app.post('/register', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -131,7 +132,9 @@ export async function appAuthRoutes(app: FastifyInstance) {
   });
 
   // ── POST /api/auth/login ──────────────────────────────────
-  app.post('/login', async (request, reply) => {
+  app.post('/login', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input' });
@@ -161,7 +164,9 @@ export async function appAuthRoutes(app: FastifyInstance) {
   });
 
   // ── POST /api/auth/google ─────────────────────────────────
-  app.post('/google', async (request, reply) => {
+  app.post('/google', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const parsed = googleSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid input' });
@@ -216,7 +221,9 @@ export async function appAuthRoutes(app: FastifyInstance) {
   });
 
   // ── GET /api/auth/me ──────────────────────────────────────
-  app.get('/me', async (request, reply) => {
+  app.get('/me', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     let payload: { id: string; email: string; type: string };
     try {
       payload = await request.jwtVerify() as any;
@@ -240,7 +247,9 @@ export async function appAuthRoutes(app: FastifyInstance) {
   });
 
   // ── POST /api/auth/logout ─────────────────────────────────
-  app.post('/logout', async (_request, reply) => {
+  app.post('/logout', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, async (_request, reply) => {
     reply.clearCookie('app_session', { path: '/api/auth' });
     return reply.send({ ok: true });
   });

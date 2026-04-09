@@ -12,7 +12,7 @@ interface SSOProvider {
 }
 
 export function SSOConfig() {
-  const [configs, setConfigs] = useState<Record<string, SSOProvider>>({});
+  const [, setConfigs] = useState<Record<string, SSOProvider>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [messages, setMessages] = useState<Record<string, { text: string; ok: boolean }>>({});
