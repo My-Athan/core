@@ -89,14 +89,52 @@ export async function migrateDatabase() {
       executed_at TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS app_users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) NOT NULL UNIQUE,
+      password_hash TEXT,
+      google_id VARCHAR(128),
+      display_name VARCHAR(100),
+      avatar_url TEXT,
+      language VARCHAR(8) NOT NULL DEFAULT 'en',
+      email_verified BOOLEAN NOT NULL DEFAULT false,
+      status VARCHAR(16) NOT NULL DEFAULT 'active',
+      must_change_password BOOLEAN NOT NULL DEFAULT false,
+      blocked_at TIMESTAMP,
+      blocked_reason TEXT,
+      deleted_at TIMESTAMP,
+      purge_at TIMESTAMP,
+      last_login_at TIMESTAMP,
+      created_by UUID REFERENCES users(id),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS sso_config (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      provider VARCHAR(30) NOT NULL,
+      enabled BOOLEAN NOT NULL DEFAULT false,
+      client_id TEXT,
+      client_secret TEXT,
+      redirect_uri TEXT,
+      logto_endpoint TEXT,
+      require_email_verification BOOLEAN NOT NULL DEFAULT false,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_by UUID REFERENCES users(id)
+    );
+
     -- Indexes (IF NOT EXISTS supported in PG 9.5+)
     CREATE INDEX IF NOT EXISTS idx_devices_group_id ON devices(group_id);
     CREATE INDEX IF NOT EXISTS idx_devices_last_heartbeat ON devices(last_heartbeat);
     CREATE INDEX IF NOT EXISTS idx_devices_user_id ON devices(user_id);
+    CREATE INDEX IF NOT EXISTS idx_devices_app_user_id ON devices(app_user_id);
     CREATE INDEX IF NOT EXISTS idx_devices_location ON devices(lat, lon);
     CREATE INDEX IF NOT EXISTS idx_stats_device_date ON stats(device_id, date);
     CREATE INDEX IF NOT EXISTS idx_sync_group_consumed ON sync_triggers(group_id, consumed);
     CREATE INDEX IF NOT EXISTS idx_commands_device_status ON device_commands(device_id, status);
+    CREATE INDEX IF NOT EXISTS idx_app_users_google_id ON app_users(google_id);
+    CREATE INDEX IF NOT EXISTS idx_app_users_status ON app_users(status);
+    CREATE INDEX IF NOT EXISTS idx_app_users_purge_at ON app_users(purge_at);
   `);
 
   // Add must_change_password column if it doesn't exist (for upgrades)
@@ -118,6 +156,25 @@ export async function migrateDatabase() {
     ALTER TABLE releases ADD COLUMN IF NOT EXISTS auto_update BOOLEAN NOT NULL DEFAULT false;
     ALTER TABLE releases ADD COLUMN IF NOT EXISTS min_version VARCHAR(20);
     ALTER TABLE devices ADD COLUMN IF NOT EXISTS hardware_type VARCHAR(30) DEFAULT 'esp32c3-v1';
+  `);
+
+  // Add app_users profile/lifecycle columns (for upgrades from pre-user-management schema)
+  await db.execute(sql`
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS language VARCHAR(8) NOT NULL DEFAULT 'en';
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'active';
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS blocked_at TIMESTAMP;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS blocked_reason TEXT;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS purge_at TIMESTAMP;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+    ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
+  `);
+
+  // Link devices to app users (for upgrades)
+  await db.execute(sql`
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS app_user_id UUID REFERENCES app_users(id) ON DELETE SET NULL;
   `);
 
   console.log('[Migrate] Database schema ready.');
