@@ -124,6 +124,9 @@ export async function migrateDatabase() {
       updated_by UUID REFERENCES users(id)
     );
 
+    -- Ensure app_user_id exists before indexing it (upgrade path: table may predate this column)
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS app_user_id UUID;
+
     -- Indexes (IF NOT EXISTS supported in PG 9.5+)
     CREATE INDEX IF NOT EXISTS idx_devices_group_id ON devices(group_id);
     CREATE INDEX IF NOT EXISTS idx_devices_last_heartbeat ON devices(last_heartbeat);
@@ -190,6 +193,19 @@ export async function migrateDatabase() {
       END IF;
     END $$;
   `);
+
+  // Seed Google SSO config from env vars (idempotent — skips if a google row already exists).
+  // Set GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET in .env to enable Google sign-in on first run.
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (googleClientId) {
+    await db.execute(sql`
+      INSERT INTO sso_config (provider, enabled, client_id, client_secret)
+      SELECT 'google', true, ${googleClientId}, ${googleClientSecret ?? null}
+      WHERE NOT EXISTS (SELECT 1 FROM sso_config WHERE provider = 'google');
+    `);
+    console.log('[Migrate] Google SSO config seeded.');
+  }
 
   console.log('[Migrate] Database schema ready.');
 }
