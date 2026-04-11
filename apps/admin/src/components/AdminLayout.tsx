@@ -8,6 +8,7 @@ const NAV = [
   { path: '/releases', label: 'Releases', icon: '↑' },
   { path: '/groups', label: 'Groups', icon: '⬡⬡' },
   { path: '/analytics', label: 'Analytics', icon: '▤' },
+  { path: '/users', label: 'App Users', icon: '👥' },
   { path: '/sso', label: 'SSO Config', icon: '⛨' },
 ];
 

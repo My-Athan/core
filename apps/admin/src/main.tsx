@@ -11,6 +11,8 @@ import { Groups } from './pages/Groups';
 import { Analytics } from './pages/Analytics';
 import { Setup } from './pages/Setup';
 import { SSOConfig } from './pages/SSOConfig';
+import { AppUsers } from './pages/AppUsers';
+import { AppUserDetail } from './pages/AppUserDetail';
 import { api } from './lib/api';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -50,6 +52,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
         <Route path="/sso" element={<ProtectedRoute><SSOConfig /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute><AppUsers /></ProtectedRoute>} />
+        <Route path="/users/:userId" element={<ProtectedRoute><AppUserDetail /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,

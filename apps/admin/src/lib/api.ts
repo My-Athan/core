@@ -95,4 +95,26 @@ export const api = {
     requireEmailVerification?: boolean;
   }) =>
     request<{ ok: boolean }>('PUT', `/api/admin/sso-config/${encodeURIComponent(provider)}`, data),
+
+  // ── App Users ─────────────────────────────────────────────
+  getAppUsers: (params: { page?: number; limit?: number; search?: string; status?: string; authProvider?: string }) =>
+    request<{ users: any[]; total: number; page: number; limit: number }>('GET', `/api/admin/app-users?${buildQuery(params)}`),
+  getAppUser: (userId: string) =>
+    request<{ user: any; devices: any[] }>('GET', `/api/admin/app-users/${encodeURIComponent(userId)}`),
+  createAppUser: (data: { email: string; displayName: string; tempPassword: string; language?: string }) =>
+    request<{ user: any; tempPassword: string }>('POST', '/api/admin/app-users', data),
+  updateAppUser: (userId: string, data: { email?: string; displayName?: string; language?: string }) =>
+    request<{ user: any }>('PATCH', `/api/admin/app-users/${encodeURIComponent(userId)}`, data),
+  blockAppUser: (userId: string, reason: string) =>
+    request<{ user: any }>('POST', `/api/admin/app-users/${encodeURIComponent(userId)}/block`, { reason }),
+  unblockAppUser: (userId: string) =>
+    request<{ user: any }>('POST', `/api/admin/app-users/${encodeURIComponent(userId)}/unblock`),
+  resetAppUserPassword: (userId: string) =>
+    request<{ user: any; tempPassword: string }>('POST', `/api/admin/app-users/${encodeURIComponent(userId)}/reset-password`),
+  deleteAppUser: (userId: string) =>
+    request<{ user: any }>('DELETE', `/api/admin/app-users/${encodeURIComponent(userId)}`),
+  restoreAppUser: (userId: string) =>
+    request<{ user: any }>('POST', `/api/admin/app-users/${encodeURIComponent(userId)}/restore`),
+  purgeAppUser: (userId: string) =>
+    request<{ ok: boolean }>('POST', `/api/admin/app-users/${encodeURIComponent(userId)}/purge`),
 };
