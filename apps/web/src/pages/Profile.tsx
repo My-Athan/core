@@ -124,13 +124,20 @@ export function Profile() {
             src={avatarUrl}
             alt={user.displayName ?? user.email}
             className="w-20 h-20 rounded-full object-cover"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            onError={e => {
+              const img = e.target as HTMLImageElement;
+              img.style.display = 'none';
+              const fallback = img.nextElementSibling as HTMLElement | null;
+              if (fallback) fallback.style.display = 'flex';
+            }}
           />
-        ) : (
-          <div className="w-20 h-20 rounded-full bg-emerald-700 flex items-center justify-center text-white text-2xl font-bold">
-            {initials}
-          </div>
-        )}
+        ) : null}
+        <div
+          className="w-20 h-20 rounded-full bg-emerald-700 flex items-center justify-center text-white text-2xl font-bold"
+          style={{ display: avatarUrl && !editMode ? 'none' : 'flex' }}
+        >
+          {initials}
+        </div>
         <div className="text-center">
           <p className="font-semibold text-gray-900">{user.displayName || '—'}</p>
           <p className="text-sm text-gray-500">{user.email}</p>
