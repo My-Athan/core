@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../lib/auth-api';
 
-function isSafeUrl(url: string): boolean {
+/** Returns the URL string only if it is http/https, otherwise null. */
+function sanitizeImageUrl(url: string): string | null {
   try {
-    const { protocol } = new URL(url);
-    return protocol === 'https:' || protocol === 'http:';
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    return parsed.href;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -46,6 +48,8 @@ export function Profile() {
   const [deleteError, setDeleteError] = useState('');
 
   if (!user) return null;
+
+  const safeAvatarUrl = !editMode ? sanitizeImageUrl(avatarUrl) : null;
 
   const initials = (user.displayName || user.email)
     .split(' ')
@@ -128,9 +132,9 @@ export function Profile() {
     <div className="space-y-4">
       {/* Avatar + name */}
       <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-3">
-        {avatarUrl && !editMode && isSafeUrl(avatarUrl) ? (
+        {safeAvatarUrl ? (
           <img
-            src={avatarUrl}
+            src={safeAvatarUrl}
             alt={user.displayName ?? user.email}
             className="w-20 h-20 rounded-full object-cover"
             onError={e => {
@@ -143,7 +147,7 @@ export function Profile() {
         ) : null}
         <div
           className="w-20 h-20 rounded-full bg-emerald-700 flex items-center justify-center text-white text-2xl font-bold"
-          style={{ display: avatarUrl && !editMode && isSafeUrl(avatarUrl) ? 'none' : 'flex' }}
+          style={{ display: safeAvatarUrl ? 'none' : 'flex' }}
         >
           {initials}
         </div>
