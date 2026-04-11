@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AuthProvider } from './context/AuthContext';
+import { PrivateRoute } from './components/PrivateRoute';
 import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { Setup } from './pages/Setup';
@@ -10,22 +12,61 @@ import { AudioSettings } from './pages/AudioSettings';
 import { RamadanSettings } from './pages/RamadanSettings';
 import { MultiRoom } from './pages/MultiRoom';
 import { DeviceSettings } from './pages/DeviceSettings';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { ForceChangePassword } from './pages/ForceChangePassword';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <Layout>
+        <AuthProvider>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/setup" element={<Setup />} />
-            <Route path="/prayers" element={<PrayerTimes />} />
-            <Route path="/audio" element={<AudioSettings />} />
-            <Route path="/ramadan" element={<RamadanSettings />} />
-            <Route path="/multi-room" element={<MultiRoom />} />
-            <Route path="/settings" element={<DeviceSettings />} />
+            {/* Public routes — no Layout wrapper */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/change-password" element={
+              <PrivateRoute><ForceChangePassword /></PrivateRoute>
+            } />
+
+            {/* Protected routes — inside Layout */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <Layout><Home /></Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/setup" element={
+              <PrivateRoute>
+                <Layout><Setup /></Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/prayers" element={
+              <PrivateRoute>
+                <Layout><PrayerTimes /></Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/audio" element={
+              <PrivateRoute>
+                <Layout><AudioSettings /></Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/ramadan" element={
+              <PrivateRoute>
+                <Layout><RamadanSettings /></Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/multi-room" element={
+              <PrivateRoute>
+                <Layout><MultiRoom /></Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/settings" element={
+              <PrivateRoute>
+                <Layout><DeviceSettings /></Layout>
+              </PrivateRoute>
+            } />
           </Routes>
-        </Layout>
+        </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>,
