@@ -23,6 +23,7 @@ export const devices = pgTable('devices', {
   deviceId: varchar('device_id', { length: 32 }).notNull().unique(),  // "myathan-XXXXXX"
   apiKey: varchar('api_key', { length: 128 }).notNull(),
   userId: uuid('user_id').references(() => users.id),
+  appUserId: uuid('app_user_id').references(() => appUsers.id, { onDelete: 'set null' }),
   groupId: uuid('group_id').references(() => deviceGroups.id),
   firmwareVersion: varchar('firmware_version', { length: 20 }),
   lastHeartbeat: timestamp('last_heartbeat'),
@@ -39,6 +40,7 @@ export const devices = pgTable('devices', {
   groupIdIdx: index('idx_devices_group_id').on(table.groupId),
   heartbeatIdx: index('idx_devices_last_heartbeat').on(table.lastHeartbeat),
   userIdIdx: index('idx_devices_user_id').on(table.userId),
+  appUserIdIdx: index('idx_devices_app_user_id').on(table.appUserId),
   locationIdx: index('idx_devices_location').on(table.lat, table.lon),
 }));
 
@@ -133,11 +135,23 @@ export const appUsers = pgTable('app_users', {
   passwordHash: text('password_hash'),
   googleId: varchar('google_id', { length: 128 }),
   displayName: varchar('display_name', { length: 100 }),
+  avatarUrl: text('avatar_url'),
+  language: varchar('language', { length: 8 }).notNull().default('en'),
   emailVerified: boolean('email_verified').notNull().default(false),
+  status: varchar('status', { length: 16 }).notNull().default('active'),  // 'active' | 'invited' | 'blocked' | 'deleted'
+  mustChangePassword: boolean('must_change_password').notNull().default(false),
+  blockedAt: timestamp('blocked_at'),
+  blockedReason: text('blocked_reason'),
+  deletedAt: timestamp('deleted_at'),
+  purgeAt: timestamp('purge_at'),
+  lastLoginAt: timestamp('last_login_at'),
+  createdBy: uuid('created_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
   googleIdIdx: index('idx_app_users_google_id').on(table.googleId),
+  statusIdx: index('idx_app_users_status').on(table.status),
+  purgeAtIdx: index('idx_app_users_purge_at').on(table.purgeAt),
 }));
 
 // ─────────────────────────────────────────────────────────────
