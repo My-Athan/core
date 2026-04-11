@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { AppUser } from '@myathan/shared';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../lib/auth-api';
 
@@ -12,6 +13,14 @@ function sanitizeImageUrl(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+interface LinkedDevice {
+  id: string;
+  deviceId: string;
+  name?: string | null;
+  firmwareVersion?: string | null;
+  online?: boolean;
 }
 
 const LANGUAGES = [
@@ -36,10 +45,11 @@ export function Profile() {
   const [profileError, setProfileError] = useState('');
 
   // Linked devices
-  const [devices, setDevices] = useState<any[] | null>(null);
+  const [devices, setDevices] = useState<LinkedDevice[] | null>(null);
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [devicesError, setDevicesError] = useState('');
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+  const [unlinkError, setUnlinkError] = useState('');
 
   // Delete account modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -49,9 +59,12 @@ export function Profile() {
 
   if (!user) return null;
 
+  // Captured as non-null for use in closures below the early return
+  const currentUser: AppUser = user;
+
   const safeAvatarUrl = !editMode ? sanitizeImageUrl(avatarUrl) : null;
 
-  const initials = (user.displayName || user.email)
+  const initials = (currentUser.displayName || currentUser.email)
     .split(' ')
     .map(w => w[0])
     .join('')
@@ -79,9 +92,9 @@ export function Profile() {
   }
 
   function handleCancelEdit() {
-    setDisplayName(user!.displayName ?? '');
-    setAvatarUrl(user!.avatarUrl ?? '');
-    setLanguage(user!.language ?? 'en');
+    setDisplayName(currentUser.displayName ?? '');
+    setAvatarUrl(currentUser.avatarUrl ?? '');
+    setLanguage(currentUser.language ?? 'en');
     setProfileError('');
     setEditMode(false);
   }
@@ -93,7 +106,7 @@ export function Profile() {
     setDevicesError('');
     try {
       const res = await authApi.getDevices();
-      setDevices(res.devices);
+      setDevices(res.devices as LinkedDevice[]);
     } catch (err: any) {
       setDevicesError(err.message || 'Failed to load devices');
     } finally {
@@ -102,13 +115,13 @@ export function Profile() {
   }
 
   async function handleUnlink(deviceId: string) {
-    if (!confirm(`Unlink device ${deviceId}? You can re-link it later.`)) return;
+    setUnlinkError('');
     setUnlinkingId(deviceId);
     try {
       await authApi.unlinkDevice(deviceId);
       setDevices(d => (d ?? []).filter(dev => dev.deviceId !== deviceId));
     } catch (err: any) {
-      alert(err.message || 'Failed to unlink device');
+      setUnlinkError(err.message || 'Failed to unlink device');
     } finally {
       setUnlinkingId(null);
     }
@@ -135,7 +148,7 @@ export function Profile() {
         {safeAvatarUrl ? (
           <img
             src={safeAvatarUrl}
-            alt={user.displayName ?? user.email}
+            alt={currentUser.displayName ?? currentUser.email}
             className="w-20 h-20 rounded-full object-cover"
             onError={e => {
               const img = e.target as HTMLImageElement;
@@ -152,13 +165,13 @@ export function Profile() {
           {initials}
         </div>
         <div className="text-center">
-          <p className="font-semibold text-gray-900">{user.displayName || '—'}</p>
-          <p className="text-sm text-gray-500">{user.email}</p>
+          <p className="font-semibold text-gray-900">{currentUser.displayName || '—'}</p>
+          <p className="text-sm text-gray-500">{currentUser.email}</p>
           <div className="flex gap-1 justify-center mt-1">
-            {user.authProviders.includes('google') && (
+            {currentUser.authProviders.includes('google') && (
               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Google</span>
             )}
-            {user.authProviders.includes('email') && (
+            {currentUser.authProviders.includes('email') && (
               <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Email</span>
             )}
           </div>
@@ -190,6 +203,7 @@ export function Profile() {
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
                 placeholder="Your name"
+                autoComplete="name"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
@@ -200,6 +214,7 @@ export function Profile() {
                 value={avatarUrl}
                 onChange={e => setAvatarUrl(e.target.value)}
                 placeholder="https://…"
+                autoComplete="off"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
@@ -253,6 +268,9 @@ export function Profile() {
         )}
         {devicesError && (
           <p className="text-sm text-red-500">{devicesError}</p>
+        )}
+        {unlinkError && (
+          <p className="text-sm text-red-500 mt-1">{unlinkError}</p>
         )}
         {devices !== null && devices.length === 0 && (
           <p className="text-sm text-gray-400">No linked devices.</p>
@@ -325,6 +343,7 @@ export function Profile() {
               value={deleteConfirm}
               onChange={e => setDeleteConfirm(e.target.value)}
               placeholder="delete"
+              autoComplete="off"
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 mb-3"
             />
             <div className="flex gap-2">

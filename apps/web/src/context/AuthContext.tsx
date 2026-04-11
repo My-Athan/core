@@ -43,7 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(({ user: me }) => setUser(me))
       .catch(() => { authApi.clearToken(); setUser(null); })
       .finally(() => setLoading(false));
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — runs once on mount only
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signOut, refresh }}>

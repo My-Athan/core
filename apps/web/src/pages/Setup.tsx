@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { bleProvisioner } from '../lib/ble-provisioning';
 import { authApi } from '../lib/auth-api';
 
@@ -21,8 +22,8 @@ export function Setup() {
 
       await bleProvisioner.connect();
       setStep('wifi');
-    } catch (e: any) {
-      setError(e.message || 'Bluetooth scan failed');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Bluetooth scan failed');
       setStep('error');
     }
   }
@@ -47,8 +48,8 @@ export function Setup() {
       }
 
       setStep('done');
-    } catch (e: any) {
-      setError(e.message || 'Failed to send credentials');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to send credentials');
       setStep('error');
     }
   }
@@ -89,6 +90,7 @@ export function Setup() {
             <input
               type="text" value={ssid} onChange={e => setSsid(e.target.value)}
               placeholder="Enter WiFi SSID"
+              autoComplete="off"
               className="w-full border rounded-xl p-3"
             />
           </div>
@@ -98,6 +100,7 @@ export function Setup() {
             <input
               type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder="Enter WiFi password"
+              autoComplete="off"
               className="w-full border rounded-xl p-3"
             />
           </div>
@@ -130,9 +133,9 @@ export function Setup() {
               Device not yet linked — visit Profile to link it once it comes online.
             </p>
           )}
-          <a href="/" className="inline-block bg-emerald-700 text-white px-8 py-3 rounded-xl font-medium">
+          <Link to="/" className="inline-block bg-emerald-700 text-white px-8 py-3 rounded-xl font-medium">
             Go to Home
-          </a>
+          </Link>
         </div>
       )}
 

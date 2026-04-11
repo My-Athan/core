@@ -81,7 +81,7 @@ export function Register() {
         )}
 
         {GOOGLE_CLIENT_ID && (
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-4" aria-hidden="true">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-gray-400 text-xs">or</span>
             <div className="flex-1 h-px bg-gray-200" />

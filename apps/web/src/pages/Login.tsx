@@ -21,13 +21,15 @@ export function Login() {
   // Already logged in → redirect
   useEffect(() => {
     if (user) navigate(from, { replace: true });
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // from is derived from location.state at render time; re-running on from change would cause redirect loops
 
   useEffect(() => {
     authApi.getProviders()
       .then(r => setProviders(r.providers))
       .catch(() => {});
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — fetch once on mount
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
