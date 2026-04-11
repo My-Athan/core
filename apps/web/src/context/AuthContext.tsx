@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { user: me } = await authApi.me();
       setUser(me);
-    } catch {
+    } catch (_e: unknown) {
       authApi.clearToken();
       setUser(null);
     }

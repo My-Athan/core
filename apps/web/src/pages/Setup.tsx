@@ -42,7 +42,7 @@ export function Setup() {
         try {
           await authApi.linkDevice(deviceId);
           setLinked(true);
-        } catch {
+        } catch (_e: unknown) {
           // Non-fatal — user can link manually from Profile > Linked devices
         }
       }

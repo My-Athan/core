@@ -16,7 +16,7 @@ export function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  async function handleRegister(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -24,8 +24,8 @@ export function Register() {
       const res = await authApi.register(email, password, displayName || undefined);
       signIn(res.token, res.user);
       navigate('/', { replace: true });
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -39,8 +39,8 @@ export function Register() {
       const res = await authApi.googleAuth(credentialResponse.credential);
       signIn(res.token, res.user);
       navigate('/', { replace: true });
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Google sign-in failed');
     } finally {
       setLoading(false);
     }

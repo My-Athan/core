@@ -17,6 +17,8 @@
     "react-router-dom": "^7.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^22.19.17",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/web-bluetooth": "^0.0.21",

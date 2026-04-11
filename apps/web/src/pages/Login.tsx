@@ -10,7 +10,7 @@ export function Login() {
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as any)?.from?.pathname ?? '/';
+  const from = (location.state as { from?: { pathname: string } } | undefined)?.from?.pathname ?? '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +31,7 @@ export function Login() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally empty — fetch once on mount
 
-  async function handleEmailLogin(e: React.FormEvent) {
+  async function handleEmailLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -39,13 +39,14 @@ export function Login() {
       const res = await authApi.login(email, password);
       signIn(res.token, res.user);
       navigate(res.user.mustChangePassword ? '/change-password' : from, { replace: true });
-    } catch (err: any) {
-      if (err.code === 'account_blocked') {
+    } catch (e: unknown) {
+      const code = e instanceof Error && 'code' in e ? (e as Error & { code: string }).code : null;
+      if (code === 'account_blocked') {
         setError('Your account has been blocked. Contact support.');
-      } else if (err.code === 'account_deleted') {
+      } else if (code === 'account_deleted') {
         setError('This account has been deleted.');
       } else {
-        setError(err.message || 'Invalid email or password');
+        setError(e instanceof Error ? e.message : 'Invalid email or password');
       }
     } finally {
       setLoading(false);
@@ -60,11 +61,12 @@ export function Login() {
       const res = await authApi.googleAuth(credentialResponse.credential);
       signIn(res.token, res.user);
       navigate(res.user.mustChangePassword ? '/change-password' : from, { replace: true });
-    } catch (err: any) {
-      if (err.code === 'account_blocked') {
+    } catch (e: unknown) {
+      const code = e instanceof Error && 'code' in e ? (e as Error & { code: string }).code : null;
+      if (code === 'account_blocked') {
         setError('Your account has been blocked. Contact support.');
       } else {
-        setError(err.message || 'Google sign-in failed');
+        setError(e instanceof Error ? e.message : 'Google sign-in failed');
       }
     } finally {
       setLoading(false);

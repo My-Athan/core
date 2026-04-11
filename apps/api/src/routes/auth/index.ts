@@ -59,11 +59,11 @@ export async function appAuthRoutes(app: FastifyInstance) {
   // explicitly registered on the same instance (scoped). This makes the rate-limiting
   // unambiguous to static analysis tools (CodeQL) which trace scope ownership.
   await app.register(async function rateLimitedRoutes(scoped: FastifyInstance) {
-    await scoped.register(rateLimit, { max: 30, timeWindow: '1 minute' });
+    await scoped.register(rateLimit, { max: process.env.NODE_ENV === 'test' ? 500 : 30, timeWindow: '1 minute' });
 
     // ── POST /api/auth/register ───────────────────────────────
     scoped.post('/register', {
-      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      config: { rateLimit: { max: process.env.NODE_ENV === 'test' ? 200 : 10, timeWindow: '1 minute' } },
     }, async (request, reply) => {
       const parsed = registerSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -224,7 +224,7 @@ export async function appAuthRoutes(app: FastifyInstance) {
     // ── GET /api/auth/me ──────────────────────────────────────
     // appAuth preHandler calls jwtVerify(); handler only does DB lookup.
     scoped.get('/me', {
-      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+      config: { rateLimit: { max: process.env.NODE_ENV === 'test' ? 500 : 60, timeWindow: '1 minute' } },
       preHandler: appAuth,
     }, async (request, reply) => {
       const { id } = (request as any).appUser as { id: string };
@@ -238,7 +238,7 @@ export async function appAuthRoutes(app: FastifyInstance) {
 
     // ── POST /api/auth/logout ─────────────────────────────────
     scoped.post('/logout', {
-      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+      config: { rateLimit: { max: process.env.NODE_ENV === 'test' ? 500 : 60, timeWindow: '1 minute' } },
     }, async (_request, reply) => {
       reply.clearCookie('app_session', { path: '/api/auth' });
       return reply.send({ ok: true });

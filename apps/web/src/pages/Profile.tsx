@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { AppUser } from '@myathan/shared';
 import { useAuth } from '../context/AuthContext';
@@ -36,6 +36,9 @@ export function Profile() {
   const { user, refresh, signOut } = useAuth();
   const navigate = useNavigate();
 
+  // Avatar load state — false = show initials fallback
+  const [avatarLoaded, setAvatarLoaded] = useState(true);
+
   // Profile edit state
   const [editMode, setEditMode] = useState(false);
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
@@ -56,6 +59,9 @@ export function Profile() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // Reset avatar load state when the sanitized URL changes
+  useEffect(() => { setAvatarLoaded(true); }, [user?.avatarUrl, editMode]);
 
   if (!user) return null;
 
@@ -145,25 +151,22 @@ export function Profile() {
     <div className="space-y-4">
       {/* Avatar + name */}
       <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-3">
-        {safeAvatarUrl ? (
+        {safeAvatarUrl && avatarLoaded && (
           <img
             src={safeAvatarUrl}
             alt={currentUser.displayName ?? currentUser.email}
             className="w-20 h-20 rounded-full object-cover"
-            onError={e => {
-              const img = e.target as HTMLImageElement;
-              img.style.display = 'none';
-              const fallback = img.nextElementSibling as HTMLElement | null;
-              if (fallback) fallback.style.display = 'flex';
+            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+              e.currentTarget.style.display = 'none';
+              setAvatarLoaded(false);
             }}
           />
-        ) : null}
-        <div
-          className="w-20 h-20 rounded-full bg-emerald-700 flex items-center justify-center text-white text-2xl font-bold"
-          style={{ display: safeAvatarUrl ? 'none' : 'flex' }}
-        >
-          {initials}
-        </div>
+        )}
+        {(!safeAvatarUrl || !avatarLoaded) && (
+          <div className="w-20 h-20 rounded-full bg-emerald-700 flex items-center justify-center text-white text-2xl font-bold">
+            {initials}
+          </div>
+        )}
         <div className="text-center">
           <p className="font-semibold text-gray-900">{currentUser.displayName || '—'}</p>
           <p className="text-sm text-gray-500">{currentUser.email}</p>
@@ -302,7 +305,11 @@ export function Profile() {
       <div className="bg-white rounded-2xl p-4">
         <button
           onClick={async () => {
-            await signOut();
+            try {
+              await signOut();
+            } catch (_e: unknown) {
+              // signOut clears local state regardless — proceed to redirect
+            }
             navigate('/login', { replace: true });
           }}
           className="w-full text-sm font-semibold text-gray-700 py-3 rounded-xl bg-gray-100"
