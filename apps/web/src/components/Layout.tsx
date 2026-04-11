@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { path: '/prayers', label: 'Times', icon: '🕐' },
   { path: '/audio', label: 'Audio', icon: '🔊' },
   { path: '/settings', label: 'Settings', icon: '⚙️' },
+  { path: '/profile', label: 'Profile', icon: '👤' },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

@@ -15,6 +15,7 @@ import { DeviceSettings } from './pages/DeviceSettings';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { ForceChangePassword } from './pages/ForceChangePassword';
+import { Profile } from './pages/Profile';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -63,6 +64,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/settings" element={
               <PrivateRoute>
                 <Layout><DeviceSettings /></Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <Layout><Profile /></Layout>
               </PrivateRoute>
             } />
           </Routes>
