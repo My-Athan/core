@@ -10,20 +10,69 @@ const googleSchema = z.object({
 // ─────────────────────────────────────────────────────────────
 // Mobile App JWT Authentication
 //
-// Verifies the app_session JWT and attaches the payload to
-// request.appUser. Used as a preHandler on protected app routes.
+// Verifies the app_session JWT (from Authorization header or
+// app_session cookie) and attaches the payload to request.appUser.
+// The global @fastify/jwt plugin is configured with cookieName
+// 'admin_session' for the admin portal. Mobile routes need to
+// read the 'app_session' cookie separately, so we extract the
+// token manually and call app.jwt.verify() directly.
+// Also re-checks DB status so blocks/deletes take effect immediately.
 // ─────────────────────────────────────────────────────────────
 
 export async function appAuth(request: FastifyRequest, reply: FastifyReply) {
+  // Extract token: Authorization header takes priority, then app_session cookie.
+  let token: string | undefined;
+  const authHeader = request.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
+  } else {
+    token = (request.cookies as Record<string, string | undefined>)['app_session'];
+  }
+
+  if (!token) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  let payload: { id: string; email: string; type: string };
   try {
-    const payload = await request.jwtVerify() as { id: string; email: string; type: string };
-    if (payload.type !== 'app') {
-      return reply.status(403).send({ error: 'Invalid token type' });
-    }
-    (request as any).appUser = payload;
+    payload = (request.server as any).jwt.verify(token) as { id: string; email: string; type: string };
   } catch {
     return reply.status(401).send({ error: 'Not authenticated' });
   }
+
+  if (payload.type !== 'app') {
+    return reply.status(403).send({ error: 'Invalid token type' });
+  }
+
+  // Re-check status in DB so blocks/deletes are enforced within one request.
+  const [user] = await db
+    .select({
+      id: schema.appUsers.id,
+      email: schema.appUsers.email,
+      status: schema.appUsers.status,
+      mustChangePassword: schema.appUsers.mustChangePassword,
+    })
+    .from(schema.appUsers)
+    .where(eq(schema.appUsers.id, payload.id))
+    .limit(1);
+
+  if (!user) {
+    return reply.status(401).send({ error: 'Account no longer exists' });
+  }
+  if (user.status === 'blocked') {
+    return reply.status(403).send({ error: 'Account blocked', code: 'account_blocked' });
+  }
+  if (user.status === 'deleted') {
+    return reply.status(403).send({ error: 'Account deleted', code: 'account_deleted' });
+  }
+
+  (request as any).appUser = {
+    id: user.id,
+    email: user.email,
+    type: 'app',
+    status: user.status,
+    mustChangePassword: user.mustChangePassword,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -66,6 +115,7 @@ export async function googleTokenAuth(request: FastifyRequest, reply: FastifyRep
       sub: claims.sub as string,
       email: claims.email as string,
       name: claims.name as string | undefined,
+      picture: claims.picture as string | undefined,
     };
   } catch (err: any) {
     if (err.message !== 'token expired' &&
