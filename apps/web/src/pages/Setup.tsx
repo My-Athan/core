@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { bleProvisioner } from '../lib/ble-provisioning';
+import { authApi } from '../lib/auth-api';
 
 type SetupStep = 'scan' | 'connect' | 'wifi' | 'sending' | 'done' | 'error';
 
@@ -9,6 +10,7 @@ export function Setup() {
   const [ssid, setSsid] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [linked, setLinked] = useState(false);
 
   async function handleScan() {
     try {
@@ -30,6 +32,20 @@ export function Setup() {
     try {
       setStep('sending');
       await bleProvisioner.sendCredentials(ssid, password);
+
+      // Link device to the logged-in user's account.
+      // Best-effort: device may not be in DB yet if it hasn't phoned home,
+      // but we try immediately and silently skip if not found.
+      const deviceId = bleProvisioner.getDeviceId();
+      if (deviceId) {
+        try {
+          await authApi.linkDevice(deviceId);
+          setLinked(true);
+        } catch {
+          // Non-fatal — user can link manually from Profile > Linked devices
+        }
+      }
+
       setStep('done');
     } catch (e: any) {
       setError(e.message || 'Failed to send credentials');
@@ -106,6 +122,14 @@ export function Setup() {
           <div className="text-4xl">✅</div>
           <p className="text-lg font-medium text-gray-900">Device Connected!</p>
           <p className="text-gray-500">Your MyAthan device is now connected to WiFi and will sync prayer times automatically.</p>
+          {linked && (
+            <p className="text-sm text-emerald-700 font-medium">Device linked to your account.</p>
+          )}
+          {!linked && (
+            <p className="text-xs text-gray-400">
+              Device not yet linked — visit Profile to link it once it comes online.
+            </p>
+          )}
           <a href="/" className="inline-block bg-emerald-700 text-white px-8 py-3 rounded-xl font-medium">
             Go to Home
           </a>

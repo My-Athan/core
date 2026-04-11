@@ -67,6 +67,9 @@ export const authApi = {
   getDevices: () =>
     request<{ devices: any[] }>('GET', '/api/auth/devices'),
 
+  linkDevice: (deviceId: string) =>
+    request<{ ok: boolean }>('POST', `/api/auth/devices/${encodeURIComponent(deviceId)}/link`),
+
   unlinkDevice: (deviceId: string) =>
     request<{ ok: boolean }>('POST', `/api/auth/devices/${encodeURIComponent(deviceId)}/unlink`),
 

@@ -353,6 +353,42 @@ export async function appAuthRoutes(app: FastifyInstance) {
       return reply.send({ devices });
     });
 
+    // ── POST /api/auth/devices/:deviceId/link ────────────────
+    // Link a device to the authenticated user's account.
+    // The device must already exist in the DB (registered by the firmware).
+    // A device already linked to a different user is rejected (403).
+    // Linking to oneself is idempotent (200).
+    scoped.post<{ Params: { deviceId: string } }>('/devices/:deviceId/link', {
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+      preHandler: appAuth,
+    }, async (request, reply) => {
+      const { id } = (request as any).appUser as { id: string };
+      const { deviceId } = request.params;
+
+      const [device] = await db.select({
+        id: schema.devices.id,
+        appUserId: schema.devices.appUserId,
+      }).from(schema.devices)
+        .where(eq(schema.devices.deviceId, deviceId))
+        .limit(1);
+
+      if (!device) return reply.status(404).send({ error: 'Device not found' });
+
+      if (device.appUserId && device.appUserId !== id) {
+        return reply.status(403).send({ error: 'Device is linked to another account' });
+      }
+
+      if (device.appUserId === id) {
+        return reply.send({ ok: true }); // idempotent
+      }
+
+      await db.update(schema.devices)
+        .set({ appUserId: id, updatedAt: new Date() })
+        .where(eq(schema.devices.id, device.id));
+
+      return reply.send({ ok: true });
+    });
+
     // ── POST /api/auth/devices/:deviceId/unlink ───────────────
     // Detach a device the user owns (e.g. giving it to someone else).
     // Only the owner can unlink — admins use the admin route.

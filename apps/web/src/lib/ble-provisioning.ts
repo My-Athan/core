@@ -33,6 +33,12 @@ export class BleProvisioner {
     return this.device;
   }
 
+  /** Returns the device ID as stored in the backend (lowercase of BLE name, e.g. "myathan-abcdef"). */
+  getDeviceId(): string | null {
+    if (!this.device?.name) return null;
+    return this.device.name.toLowerCase();
+  }
+
   async connect(): Promise<void> {
     if (!this.device) throw new Error('No device selected');
     this.server = await withTimeout(
