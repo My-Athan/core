@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import rateLimit from '@fastify/rate-limit';
 import { db, schema } from '../../db/index.js';
 import { adminAuth } from '../../middleware/device-auth.js';
-import type { AppUser, AppUserAuthProvider, AppUserStatus } from '@myathan/shared';
+import { toAppUser } from '../../utils/app-user.js';
 
 const SOFT_DELETE_GRACE_DAYS = 30;
 
@@ -34,33 +34,6 @@ const updateSchema = z.object({
 const blockSchema = z.object({
   reason: z.string().min(1).max(500),
 });
-
-// ── Serializer ──────────────────────────────────────────────
-// Never leak passwordHash or raw googleId. The googleId is replaced
-// by a boolean presence flag via the `authProviders` array.
-function toAppUser(row: typeof schema.appUsers.$inferSelect): AppUser {
-  const providers: AppUserAuthProvider[] = [];
-  if (row.googleId) providers.push('google');
-  if (row.passwordHash) providers.push('email');
-  return {
-    id: row.id,
-    email: row.email,
-    displayName: row.displayName,
-    avatarUrl: row.avatarUrl,
-    language: row.language,
-    status: row.status as AppUserStatus,
-    emailVerified: row.emailVerified,
-    authProviders: providers,
-    mustChangePassword: row.mustChangePassword,
-    lastLoginAt: row.lastLoginAt ? row.lastLoginAt.toISOString() : null,
-    blockedAt: row.blockedAt ? row.blockedAt.toISOString() : null,
-    blockedReason: row.blockedReason,
-    deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
-    purgeAt: row.purgeAt ? row.purgeAt.toISOString() : null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
 
 export async function appUserAdminRoutes(app: FastifyInstance) {
   await app.register(async function rateLimitedAppUserRoutes(scoped: FastifyInstance) {

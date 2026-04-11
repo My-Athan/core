@@ -32,6 +32,7 @@ export async function migrateDatabase() {
       device_id VARCHAR(32) NOT NULL UNIQUE,
       api_key VARCHAR(128) NOT NULL,
       user_id UUID REFERENCES users(id),
+      app_user_id UUID,
       group_id UUID REFERENCES device_groups(id),
       firmware_version VARCHAR(20),
       last_heartbeat TIMESTAMP,
@@ -172,9 +173,22 @@ export async function migrateDatabase() {
     ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
   `);
 
-  // Link devices to app users (for upgrades)
+  // Link devices to app users.
+  // Column is created in the devices CREATE TABLE above (without FK, because
+  // app_users didn't exist yet at that point in the block). This ALTER adds
+  // the column for upgrade paths and then wires the FK constraint idempotently.
   await db.execute(sql`
-    ALTER TABLE devices ADD COLUMN IF NOT EXISTS app_user_id UUID REFERENCES app_users(id) ON DELETE SET NULL;
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS app_user_id UUID;
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'devices_app_user_id_fkey'
+      ) THEN
+        ALTER TABLE devices
+          ADD CONSTRAINT devices_app_user_id_fkey
+          FOREIGN KEY (app_user_id) REFERENCES app_users(id) ON DELETE SET NULL;
+      END IF;
+    END $$;
   `);
 
   console.log('[Migrate] Database schema ready.');

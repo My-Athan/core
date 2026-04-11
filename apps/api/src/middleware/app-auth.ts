@@ -44,7 +44,9 @@ export async function appAuth(request: FastifyRequest, reply: FastifyReply) {
     return reply.status(403).send({ error: 'Invalid token type' });
   }
 
-  // Re-check status in DB so blocks/deletes are enforced within one request.
+  // Enforce lifecycle status on every request. JWTs are stateless, so an
+  // admin block/delete must take effect immediately — we re-check status
+  // per request (one PK lookup, O(1)).
   const [user] = await db
     .select({
       id: schema.appUsers.id,
