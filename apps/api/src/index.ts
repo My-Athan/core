@@ -10,6 +10,7 @@ import { adminRoutes } from './routes/admin/index.js';
 import { analyticsRoutes } from './routes/admin/analytics.js';
 import { appUserAdminRoutes } from './routes/admin/app-users.js';
 import { appAuthRoutes } from './routes/auth/index.js';
+import { startPurgeWorker } from './workers/purge-deleted-users.js';
 
 // ── Environment validation ──────────────────────────────────
 const requiredEnv = ['DATABASE_URL'];
@@ -99,3 +100,6 @@ try {
   app.log.error(err);
   process.exit(1);
 }
+
+// ── Background workers ──────────────────────────────────────
+startPurgeWorker();
